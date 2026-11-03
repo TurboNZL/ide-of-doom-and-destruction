@@ -1,18 +1,42 @@
 #!/bin/sh
-# Start menu entry: sets the editor up in a terminal the first time (it downloads VS Code), then opens it.
+# Start menu entry: opens the editor. The first time it downloads the editor with a progress window (no terminal).
 ide="$(dirname "$(readlink -f "$0")")/ide"
 home="$("$ide" where)"
-if [ ! -x "$home/code" ]; then
-  script="\"$ide\" setup; printf 'Press Enter to close this window... '; read _"
-  for t in x-terminal-emulator gnome-terminal konsole xfce4-terminal xterm; do
-    command -v "$t" >/dev/null 2>&1 || continue
-    case "$t" in
-      gnome-terminal) "$t" --wait -- sh -c "$script" ;;
-      xfce4-terminal) "$t" --disable-server -x sh -c "$script" ;;
-      *) "$t" -e sh -c "$script" ;;
-    esac
-    break
-  done
+title="IDE of Doom and Destruction"
+
+show_error() {
+  if command -v zenity >/dev/null 2>&1; then zenity --error --title="$title" --no-markup --width=480 --text="$1"
+  elif command -v kdialog >/dev/null 2>&1; then kdialog --title "$title" --error "$1"
+  else printf '%s\n' "$1" >&2; fi
+}
+
+# Setup is finished when the extension has been installed (it writes this file last).
+if [ ! -x "$home/code" ] || [ ! -f "$home/data/.extension-version" ]; then
+  log="$(mktemp)"
+  if command -v zenity >/dev/null 2>&1; then
+    IDE_PROGRESS=1 "$ide" setup 2>"$log" |
+      zenity --progress --title="$title" --text="Getting things ready (first start only)..." --percentage=0 --auto-close --no-cancel --width=420
+  elif command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "$title" --passivepopup "Downloading the editor. It opens when it is ready (first start only)." 600 &
+    "$ide" setup >/dev/null 2>"$log"
+  else
+    for t in x-terminal-emulator gnome-terminal konsole xfce4-terminal xterm; do
+      command -v "$t" >/dev/null 2>&1 || continue
+      case "$t" in
+        gnome-terminal) "$t" --wait -- sh -c "\"$ide\" setup 2>\"$log\"" ;;
+        xfce4-terminal) "$t" --disable-server -x sh -c "\"$ide\" setup 2>\"$log\"" ;;
+        *) "$t" -e sh -c "\"$ide\" setup 2>\"$log\"" ;;
+      esac
+      break
+    done
+  fi
+  if [ ! -x "$home/code" ] || [ ! -f "$home/data/.extension-version" ]; then
+    show_error "The editor could not be set up.
+
+$(grep -v '^$' "$log" 2>/dev/null | tail -8)"
+    rm -f "$log"
+    exit 1
+  fi
+  rm -f "$log"
 fi
-[ -x "$home/code" ] || exit 1
 exec "$ide" "$@"

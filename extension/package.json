@@ -1,6 +1,6 @@
 {
   "name": "vsproj-tools",
-  "displayName": "Visual Studio C++ Solutions",
+  "displayName": "IDE of Doom and Destruction",
   "description": "Work with Visual Studio C++ solutions (.slnx, .sln, .vcxproj) in VS Code: new Console App, Add Class, Solution Explorer, build, run and package a submission.",
   "version": "0.0.0",
   "publisher": "turbonzl",
@@ -13,22 +13,24 @@
   "activationEvents": ["onStartupFinished"],
   "contributes": {
     "commands": [
-      { "command": "vsproj.newProject", "title": "New Console App...", "category": "VS" },
-      { "command": "vsproj.build", "title": "Build Solution", "category": "VS", "icon": "$(tools)" },
-      { "command": "vsproj.rebuild", "title": "Rebuild Solution", "category": "VS" },
-      { "command": "vsproj.clean", "title": "Clean Solution", "category": "VS" },
-      { "command": "vsproj.run", "title": "Build and Run (F5)", "category": "VS", "icon": "$(play)" },
-      { "command": "vsproj.addClass", "title": "Add Class...", "category": "VS", "icon": "$(symbol-class)" },
-      { "command": "vsproj.addNewItem", "title": "Add New Item...", "category": "VS", "icon": "$(new-file)" },
-      { "command": "vsproj.addToProject", "title": "Add to Project", "category": "VS" },
-      { "command": "vsproj.removeItem", "title": "Remove from Project", "category": "VS" },
-      { "command": "vsproj.setStartupProject", "title": "Set as Startup Project", "category": "VS" },
-      { "command": "vsproj.setConfiguration", "title": "Select Configuration and Platform...", "category": "VS" },
-      { "command": "vsproj.openProjectFile", "title": "Open Project File (.vcxproj)", "category": "VS" },
-      { "command": "vsproj.refresh", "title": "Refresh Solution Explorer", "category": "VS", "icon": "$(refresh)" },
-      { "command": "vsproj.package", "title": "Package for Submission...", "category": "VS" },
-      { "command": "vsproj.checkForUpdates", "title": "Updates...", "category": "VS" },
-      { "command": "vsproj.signInGitHub", "title": "Sign in to GitHub", "category": "VS" }
+      { "command": "vsproj.newProject", "title": "New Console App...", "category": "IDE of Doom" },
+      { "command": "vsproj.build", "title": "Build (F7)", "category": "IDE of Doom", "icon": "$(tools)" },
+      { "command": "vsproj.rebuild", "title": "Rebuild Solution", "category": "IDE of Doom" },
+      { "command": "vsproj.clean", "title": "Clean Solution", "category": "IDE of Doom" },
+      { "command": "vsproj.run", "title": "Run (build and run, F5)", "category": "IDE of Doom", "icon": "$(play)" },
+      { "command": "vsproj.addClass", "title": "Add Class...", "category": "IDE of Doom", "icon": "$(symbol-class)" },
+      { "command": "vsproj.addNewItem", "title": "Add New Item...", "category": "IDE of Doom", "icon": "$(new-file)" },
+      { "command": "vsproj.addToProject", "title": "Add to Project", "category": "IDE of Doom" },
+      { "command": "vsproj.removeItem", "title": "Remove from Project", "category": "IDE of Doom" },
+      { "command": "vsproj.setStartupProject", "title": "Set as Startup Project", "category": "IDE of Doom" },
+      { "command": "vsproj.setConfiguration", "title": "Select Configuration and Platform...", "category": "IDE of Doom" },
+      { "command": "vsproj.openProjectFile", "title": "Open Project File (.vcxproj)", "category": "IDE of Doom" },
+      { "command": "vsproj.refresh", "title": "Refresh Solution Explorer", "category": "IDE of Doom", "icon": "$(refresh)" },
+      { "command": "vsproj.package", "title": "Package for Submission...", "category": "IDE of Doom" },
+      { "command": "vsproj.checkForUpdates", "title": "Updates...", "category": "IDE of Doom" },
+      { "command": "vsproj.menu", "title": "Show All Actions", "category": "IDE of Doom", "icon": "$(rocket)" },
+      { "command": "vsproj.startPage", "title": "Start Page", "category": "IDE of Doom" },
+      { "command": "vsproj.signInGitHub", "title": "Sign in to GitHub", "category": "IDE of Doom" }
     ],
     "keybindings": [
       { "command": "vsproj.run", "key": "f5", "when": "vsproj.hasSolution" },
@@ -57,6 +59,10 @@
       }
     ],
     "menus": {
+      "editor/title": [
+        { "command": "vsproj.run", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "navigation@1" },
+        { "command": "vsproj.build", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "navigation@2" }
+      ],
       "view/title": [
         { "command": "vsproj.run", "when": "view == vsprojSolution", "group": "navigation@1" },
         { "command": "vsproj.build", "when": "view == vsprojSolution", "group": "navigation@2" },
@@ -84,7 +90,7 @@
       }
     ],
     "configuration": {
-      "title": "Visual Studio C++ Solutions",
+      "title": "IDE of Doom and Destruction",
       "properties": {
         "vsproj.configuration": { "type": "string", "enum": ["Debug", "Release"], "default": "Debug", "description": "Build configuration used by Build and Run." },
         "vsproj.platform": { "type": "string", "enum": ["x64", "x86"], "default": "x64", "description": "Platform used by Build and Run." },

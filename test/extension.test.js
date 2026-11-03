@@ -14,6 +14,7 @@ function fakeVscode(registered) {
     commands: { registerCommand: (id) => { registered.push(id); return disposable; }, executeCommand: async () => {} },
     window: {
       createStatusBarItem: () => ({ show: noop, hide: noop, dispose: noop }),
+      createWebviewPanel: () => ({ webview: { onDidReceiveMessage: noop, postMessage: noop, html: '' }, onDidDispose: noop, reveal: noop }),
       registerTreeDataProvider: () => disposable,
       createOutputChannel: () => ({ appendLine: noop })
     },
@@ -24,6 +25,7 @@ function fakeVscode(registered) {
       onDidChangeWorkspaceFolders: () => disposable
     },
     StatusBarAlignment: { Left: 1 },
+    ViewColumn: { Active: -1 },
     EventEmitter: emitter,
     TreeItem: class { constructor(label) { this.label = label; } },
     TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },

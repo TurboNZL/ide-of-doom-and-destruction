@@ -5,7 +5,7 @@ Maintainer: TurboNZL <TurboNZL@users.noreply.github.com>
 Section: devel
 Priority: optional
 Installed-Size: @SIZE@
-Depends: bash, curl, tar, git, ca-certificates, xdg-utils, libgtk-3-0 | libgtk-3-0t64, libnss3, libxkbfile1, libsecret-1-0, libgbm1, libasound2 | libasound2t64, g++ | clang
+Depends: bash, zenity | kdialog, curl, tar, git, ca-certificates, xdg-utils, libgtk-3-0 | libgtk-3-0t64, libnss3, libxkbfile1, libsecret-1-0, libgbm1, libasound2 | libasound2t64, g++ | clang
 Recommends: g++-mingw-w64-x86-64-posix, gnome-keyring | kwalletmanager, policykit-1 | polkitd, clangd
 Homepage: https://github.com/TurboNZL/ide-of-doom-and-destruction
 Description: Visual Studio style C++ solutions in a portable VS Code

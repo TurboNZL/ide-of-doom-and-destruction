@@ -1,11 +1,13 @@
 [Desktop Entry]
 Type=Application
-Name=C++ Solutions Editor
-GenericName=Code Editor
+Name=IDE of Doom and Destruction
+GenericName=C++ Solutions Editor
 Comment=Edit and build Visual Studio C++ solutions
 Exec=/opt/ide-of-doom-and-destruction/bin/ide-desktop %F
 Icon=ide-of-doom-and-destruction
 Terminal=false
 Categories=Development;IDE;TextEditor;
+MimeType=inode/directory;text/x-c++src;text/x-c++hdr;text/x-csrc;text/x-chdr;text/plain;
 Keywords=c++;visual studio;solution;vcxproj;
 StartupNotify=true
+StartupWMClass=ide-of-doom-and-destruction

@@ -44,3 +44,19 @@ test('the launcher is present in the package scripts and desktop entry points at
   const exec = /^Exec=\/opt\/ide-of-doom-and-destruction\/(\S+)/m.exec(desktop)[1];
   assert.ok(fs.existsSync(path.join(__dirname, '..', exec)), exec);
 });
+
+test('the desktop entry can be chosen for folders and C++ files, and its window class matches the launcher', () => {
+  const root = path.join(__dirname, '..');
+  const desktop = fs.readFileSync(path.join(root, 'packaging', 'ide-of-doom-and-destruction.desktop'), 'utf8');
+  assert.match(desktop, /^MimeType=.*inode\/directory;.*text\/x-c\+\+src;/m);
+  assert.match(desktop, /^Name=IDE of Doom and Destruction$/m);
+  const cls = /^StartupWMClass=(\S+)$/m.exec(desktop)[1];
+  assert.ok(fs.readFileSync(path.join(root, 'bin', 'ide'), 'utf8').includes('--class=' + cls));
+});
+
+test('a start-menu launch never opens a folder by itself', () => {
+  const ide = fs.readFileSync(path.join(__dirname, '..', 'bin', 'ide'), 'utf8');
+  assert.match(ide, /\[ \$# -eq 0 \] && \[ -t 0 \]/);
+  const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'settings.json'), 'utf8'));
+  assert.strictEqual(settings['window.restoreWindows'], 'none');
+});

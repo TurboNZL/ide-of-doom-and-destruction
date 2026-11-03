@@ -29,6 +29,11 @@ test('the newest release wins, pre-releases count and drafts are skipped', () =>
   assert.strictEqual(r.asset.url, 'u2', 'the versioned file is preferred over the alias');
 });
 
+test('a release with one unversioned .deb uses it', () => {
+  const r = up.pickRelease([release('v2026.11.3', { assets: [{ name: 'ide-of-doom-and-destruction.deb', browser_download_url: 'u', size: 9 }] })]);
+  assert.strictEqual(r.asset.name, 'ide-of-doom-and-destruction.deb');
+});
+
 test('a release whose package is not attached yet has no asset (still being built)', () => {
   assert.strictEqual(up.pickRelease([release('v2026.11.0')]).asset, null);
   assert.strictEqual(up.pickRelease([]), null);

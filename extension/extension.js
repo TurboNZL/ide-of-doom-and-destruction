@@ -10,11 +10,15 @@ const { planBuild, CROSS_COMPILERS } = require('./lib/build');
 const { packageSubmission } = require('./lib/submission');
 const up = require('./lib/updater');
 const { UpdateWindow } = require('./updateWindow');
+const startPage = require('./startPage');
 
 let context;
 let solution = null; // loaded solution, or null
 let startupName = null;
 let statusItem;
+let runItem;
+let buildItem;
+let menuItem;
 let tree;
 let runTerminal;
 let updates;
@@ -78,7 +82,9 @@ function log(message) {
 
 function updateStatus() {
   if (!statusItem) return;
-  if (!solution) { statusItem.hide(); return; }
+  if (!solution) { statusItem.hide(); runItem.hide(); buildItem.hide(); return; }
+  runItem.show();
+  buildItem.show();
   const p = startupProject();
   statusItem.text = '$(gear) ' + configuration() + ' | ' + platform() + (p ? ' | ' + p.name : '');
   statusItem.show();
@@ -406,6 +412,24 @@ async function backgroundCheck() {
   } catch (e) { log('Update check failed: ' + e.message); }
 }
 
+/** One list of everything this tool adds, so none of it is hard to find. */
+async function cmdMenu() {
+  const items = [
+    { label: '$(add) New Console App...', command: 'vsproj.newProject' },
+    { label: '$(play) Run (build and run)', command: 'vsproj.run', needs: true },
+    { label: '$(tools) Build', command: 'vsproj.build', needs: true },
+    { label: '$(symbol-class) Add Class...', command: 'vsproj.addClass', needs: true },
+    { label: '$(new-file) Add New Item...', command: 'vsproj.addNewItem', needs: true },
+    { label: '$(gear) Configuration and platform...', command: 'vsproj.setConfiguration', needs: true },
+    { label: '$(package) Package for Submission...', command: 'vsproj.package', needs: true },
+    { label: '$(github) Sign in to GitHub', command: 'vsproj.signInGitHub' },
+    { label: '$(cloud-download) Updates...', command: 'vsproj.checkForUpdates' },
+    { label: '$(home) Start Page', command: 'vsproj.startPage' }
+  ].filter((i) => !i.needs || solution);
+  const pick = await vscode.window.showQuickPick(items, { title: 'IDE of Doom and Destruction' });
+  if (pick) vscode.commands.executeCommand(pick.command);
+}
+
 async function cmdSignInGitHub() {
   try {
     const session = await vscode.authentication.getSession('github', ['repo', 'workflow'], { createIfNone: true });
@@ -435,6 +459,20 @@ function activate(ctx) {
   statusItem.command = 'vsproj.setConfiguration';
   statusItem.tooltip = 'Select configuration and platform';
 
+  runItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 12);
+  runItem.text = '$(play) Run';
+  runItem.command = 'vsproj.run';
+  runItem.tooltip = 'Build and run (F5)';
+  buildItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 11);
+  buildItem.text = '$(tools) Build';
+  buildItem.command = 'vsproj.build';
+  buildItem.tooltip = 'Build (F7)';
+  menuItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  menuItem.text = '$(rocket) IDE of Doom';
+  menuItem.command = 'vsproj.menu';
+  menuItem.tooltip = 'Every action this tool adds';
+  menuItem.show();
+
   const reg = (id, fn) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
   reg('vsproj.newProject', cmdNewProject);
   reg('vsproj.build', cmdBuild);
@@ -452,8 +490,10 @@ function activate(ctx) {
   reg('vsproj.package', cmdPackage);
   reg('vsproj.checkForUpdates', cmdUpdates);
   reg('vsproj.signInGitHub', cmdSignInGitHub);
+  reg('vsproj.menu', cmdMenu);
+  reg('vsproj.startPage', () => startPage.show());
 
-  ctx.subscriptions.push(statusItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));
+  ctx.subscriptions.push(statusItem, runItem, buildItem, menuItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));
 
   const watcher = vscode.workspace.createFileSystemWatcher('**/*.{vcxproj,filters,slnx,sln}');
   watcher.onDidChange(reload);
@@ -463,6 +503,7 @@ function activate(ctx) {
 
   reload();
   setClangdDefaults();
+  if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) startPage.show();
 
   const day = 24 * 60 * 60 * 1000;
   const last = ctx.globalState.get('lastUpdateCheck') || 0;

@@ -31,6 +31,8 @@ chmod 644 "$stage/usr/share/applications/$pkg.desktop" "$stage/usr/share/icons/h
 installed_kb="$(du -sk "$stage" | cut -f1)"
 sed -e "s/@VERSION@/$version/" -e "s/@SIZE@/$installed_kb/" "$root/packaging/control" > "$stage/DEBIAN/control"
 (cd "$stage" && find opt usr -type f -exec md5sum {} + > DEBIAN/md5sums)
+cp "$root/packaging/postinst" "$stage/DEBIAN/postinst"
+chmod 755 "$stage/DEBIAN/postinst"
 chmod 644 "$stage/DEBIAN/control" "$stage/DEBIAN/md5sums"
 
 mkdir -p "$(dirname "$out")"
