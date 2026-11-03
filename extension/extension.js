@@ -4,7 +4,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { shellQuote } = require('./lib/text');
+const { shellQuote, escapeArg } = require('./lib/text');
 const ws = require('./lib/workspace');
 const { planBuild, CROSS_COMPILERS } = require('./lib/build');
 const { packageSubmission } = require('./lib/submission');
@@ -112,7 +112,8 @@ function runTask(label, commandLine, cwd) {
     vscode.TaskScope.Workspace,
     label,
     'vsproj',
-    new vscode.ShellExecution(commandLine, { cwd }),
+    // Always /bin/sh: the commands are POSIX shell, and the user's own shell (fish, nushell...) may not understand them.
+    new vscode.ShellExecution(commandLine, { cwd, executable: '/bin/sh', shellArgs: ['-c'] }),
     ['$vsproj-gcc']
   );
   task.group = vscode.TaskGroup.Build;
@@ -167,7 +168,19 @@ async function runScript(name, cwd, script, plainCommand) {
   if (runTerminal) runTerminal.dispose();
   runTerminal = vscode.window.createTerminal({ name, cwd });
   runTerminal.show(false);
-  runTerminal.sendText(plainCommand);
+  sendScript(runTerminal, plainCommand);
+}
+
+/**
+ * Runs shell text in the editor's own terminal, whatever shell the user has (fish, zsh, bash...): the text goes into a
+ * file that `sh` runs, so the user's shell only ever sees a short, backslash-escaped path.
+ */
+function sendScript(terminal, script) {
+  const dir = context.globalStorageUri.fsPath;
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'run.sh');
+  fs.writeFileSync(file, script + '\n');
+  terminal.sendText('sh ' + escapeArg(file));
 }
 
 function shimsDir() {
@@ -179,8 +192,8 @@ function shimsDir() {
 async function runNative(project, plan) {
   const shims = shimsDir();
   const script = term.programScript({ name: project.name, cwd: project.dir, command: shellQuote(plan.outFile), pathPrefix: shims });
-  const plain = 'PATH=' + shellQuote(shims) + ':"$PATH" ' + shellQuote(plan.outFile) + '; code=$?; echo; echo "[' + project.name + ' exited with code $code]"';
-  await runScript(project.name, project.dir, script, 'clear; ' + plain);
+  const plain = 'clear; PATH=' + shellQuote(shims) + ':"$PATH"; export PATH; ' + shellQuote(plan.outFile) + '; code=$?; echo; echo "[' + project.name + ' exited with code $code]"';
+  await runScript(project.name, project.dir, script, plain);
 }
 
 async function cmdRun() {
@@ -204,7 +217,7 @@ async function runInWine(name, exe, cwd) {
   if (runTerminal) runTerminal.dispose();
   runTerminal = vscode.window.createTerminal({ name: name + ' (Wine)', cwd });
   runTerminal.show(false);
-  runTerminal.sendText(wine.wineSetup() + wine.wineCommand(w, exe));
+  sendScript(runTerminal, wine.wineSetup() + wine.wineCommand(w, exe));
 }
 
 /** Builds the Windows .exe (cross compiler) and runs it under Wine. */

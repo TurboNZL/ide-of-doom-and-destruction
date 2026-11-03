@@ -56,10 +56,13 @@ The external terminal windows on a real desktop, Wine prefix creation on first r
 - A `.vsix` entry loses its executable bit unless the zip records a Unix mode (`zip.js` does); the extension also `chmod`s the shims before use.
 - MSBuild builds of a `.vcxproj` alone (not through the solution) put output under the project folder, not `$(SolutionDir)`.
 
+- The user's login shell may be fish (or anything non-POSIX). fish rejects `( ... )` and `{ ...; }` and its quoting differs from the `'\''` idiom, so build tasks pin `/bin/sh -c`, and anything typed into the user's own terminal is a short backslash-escaped `sh <file>` (`escapeArg`, `sendScript`); never type POSIX shell text into it directly.
+
 ## Session log
 - First version: all of the above.
 - Added the `.deb`, the Updates window and the GitHub setup.
 - Fixed: the start-menu entry opened the home folder (git scan); git settings narrowed. GitHub sign-in turned out to work.
 - Start-menu/Open With entry, GUI first run, start page, Run/Build buttons, unversioned release names.
 - Removed the 120-column ruler (the white vertical line) and migrate it away. External terminal runs, Wine prefix, branding, `ide integrate`.
+- Fixed: Build failed with exit 127 under fish (task ran in the user's shell). Tasks now use `/bin/sh`.
 - Unverified: that the window keeps our icon in KDE after it opens (relies on `--class` / `StartupWMClass`; VS Code may still set its own icon).

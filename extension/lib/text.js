@@ -32,6 +32,14 @@ function shellQuote(arg) {
   return "'" + String(arg).replace(/'/g, "'\\''") + "'";
 }
 
+/**
+ * Escapes an argument with backslashes instead of quotes. Unlike single quotes with the '\'' trick, this reads the
+ * same in sh, bash, zsh and fish, so it is the form to use for text typed into a user's own terminal.
+ */
+function escapeArg(arg) {
+  return String(arg).replace(/[^A-Za-z0-9_\/.,:+=@%-]/g, '\\$&');
+}
+
 /** Project files use backslashes; the rest of the code uses forward slashes. */
 function toSlash(p) {
   return p.replace(/\\/g, '/');
@@ -41,4 +49,4 @@ function toBackslash(p) {
   return p.replace(/\//g, '\\');
 }
 
-module.exports = { BOM, detectEol, withEol, splitBom, xmlEscape, xmlUnescape, shellQuote, toSlash, toBackslash };
+module.exports = { BOM, detectEol, withEol, splitBom, xmlEscape, xmlUnescape, shellQuote, escapeArg, toSlash, toBackslash };

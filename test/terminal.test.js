@@ -68,3 +68,22 @@ test('the package settings and commands for running are declared', () => {
   const ids = pkg.contributes.commands.map((c) => c.command);
   assert.ok(ids.includes('vsproj.runWindowsBuild') && ids.includes('vsproj.runExeInPrefix'));
 });
+
+test('text typed into a terminal reads the same in sh, bash and fish', () => {
+  const { escapeArg } = require('../extension/lib/text');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "it's a (dir) & $x-"));
+  const file = path.join(dir, 'run.sh');
+  fs.writeFileSync(file, 'echo built\n( echo sub ) || { echo failed ; exit 1 ; }\n');
+  for (const shell of ['sh', 'bash', 'fish']) {
+    if (cp.spawnSync('sh', ['-c', 'command -v ' + shell]).status !== 0) continue;
+    const r = cp.spawnSync(shell, ['-c', 'sh ' + escapeArg(file)], { encoding: 'utf8' });
+    assert.strictEqual(r.status, 0, shell + ': ' + r.stderr);
+    assert.match(r.stdout, /built\nsub/, shell);
+  }
+});
+
+test('the build task is pinned to /bin/sh so fish and other shells cannot break it', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'extension', 'extension.js'), 'utf8');
+  assert.match(src, /ShellExecution\(commandLine, \{ cwd, executable: '\/bin\/sh', shellArgs: \['-c'\] \}\)/);
+  assert.ok(!/sendText\(plain/.test(src), 'no raw POSIX text is typed into the user\'s shell');
+});
