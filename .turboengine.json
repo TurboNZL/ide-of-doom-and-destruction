@@ -1,0 +1,7 @@
+{
+  "engine": { "repo": "TurboNZL/turboengine", "ref": "845cd00" },
+  "modules": ["release-pipeline"],
+  "themes": "off",
+  "moved": {},
+  "notes": "Not a themed app: no UI of its own beyond VS Code. release.yml builds a .vsix and a .tar.gz instead of installers; there are no updaters/appearance/logos modules."
+}

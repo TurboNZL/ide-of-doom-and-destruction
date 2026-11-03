@@ -1,0 +1,13 @@
+{
+  "name": "ide-of-doom-and-destruction",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A portable VS Code bundle with a Visual Studio style C++ solution workflow.",
+  "license": "MIT",
+  "author": "TurboNZL",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "pack": "node scripts/pack-vsix.js dist/ide-of-doom-and-destruction.vsix"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,106 @@
+{
+  "name": "vsproj-tools",
+  "displayName": "Visual Studio C++ Solutions",
+  "description": "Work with Visual Studio C++ solutions (.slnx, .sln, .vcxproj) in VS Code: new Console App, Add Class, Solution Explorer, build, run and package a submission.",
+  "version": "0.0.0",
+  "publisher": "turbonzl",
+  "license": "MIT",
+  "author": "TurboNZL",
+  "repository": { "type": "git", "url": "https://github.com/TurboNZL/ide-of-doom-and-destruction" },
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "vsproj.newProject", "title": "New Console App...", "category": "VS" },
+      { "command": "vsproj.build", "title": "Build Solution", "category": "VS", "icon": "$(tools)" },
+      { "command": "vsproj.rebuild", "title": "Rebuild Solution", "category": "VS" },
+      { "command": "vsproj.clean", "title": "Clean Solution", "category": "VS" },
+      { "command": "vsproj.run", "title": "Build and Run (F5)", "category": "VS", "icon": "$(play)" },
+      { "command": "vsproj.addClass", "title": "Add Class...", "category": "VS", "icon": "$(symbol-class)" },
+      { "command": "vsproj.addNewItem", "title": "Add New Item...", "category": "VS", "icon": "$(new-file)" },
+      { "command": "vsproj.addToProject", "title": "Add to Project", "category": "VS" },
+      { "command": "vsproj.removeItem", "title": "Remove from Project", "category": "VS" },
+      { "command": "vsproj.setStartupProject", "title": "Set as Startup Project", "category": "VS" },
+      { "command": "vsproj.setConfiguration", "title": "Select Configuration and Platform...", "category": "VS" },
+      { "command": "vsproj.openProjectFile", "title": "Open Project File (.vcxproj)", "category": "VS" },
+      { "command": "vsproj.refresh", "title": "Refresh Solution Explorer", "category": "VS", "icon": "$(refresh)" },
+      { "command": "vsproj.package", "title": "Package for Submission...", "category": "VS" },
+      { "command": "vsproj.checkForUpdates", "title": "Check for Updates", "category": "VS" }
+    ],
+    "keybindings": [
+      { "command": "vsproj.run", "key": "f5", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.run", "key": "ctrl+f5", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.build", "key": "f7", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.build", "key": "ctrl+shift+b", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.addNewItem", "key": "ctrl+shift+a", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.addClass", "key": "shift+alt+c", "when": "vsproj.hasSolution" },
+      { "command": "vsproj.newProject", "key": "ctrl+shift+n" },
+      { "command": "vsprojSolution.focus", "key": "ctrl+alt+l", "when": "vsproj.hasSolution" },
+      { "command": "editor.action.formatDocument", "key": "ctrl+k ctrl+d", "when": "editorTextFocus" },
+      { "command": "editor.action.addCommentLine", "key": "ctrl+k ctrl+c", "when": "editorTextFocus" },
+      { "command": "editor.action.removeCommentLine", "key": "ctrl+k ctrl+u", "when": "editorTextFocus" }
+    ],
+    "viewsContainers": {
+      "activitybar": [{ "id": "vsprojContainer", "title": "Solution Explorer", "icon": "media/solution.svg" }]
+    },
+    "views": {
+      "vsprojContainer": [{ "id": "vsprojSolution", "name": "Solution Explorer" }]
+    },
+    "viewsWelcome": [
+      {
+        "view": "vsprojSolution",
+        "contents": "No solution (.slnx or .sln) found in this folder.\n[New Console App](command:vsproj.newProject)\n[Open Folder](command:vscode.openFolder)",
+        "when": "!vsproj.hasSolution"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "vsproj.run", "when": "view == vsprojSolution", "group": "navigation@1" },
+        { "command": "vsproj.build", "when": "view == vsprojSolution", "group": "navigation@2" },
+        { "command": "vsproj.addClass", "when": "view == vsprojSolution", "group": "navigation@3" },
+        { "command": "vsproj.refresh", "when": "view == vsprojSolution", "group": "navigation@4" }
+      ],
+      "view/item/context": [
+        { "command": "vsproj.addClass", "when": "view == vsprojSolution && viewItem =~ /^(project|filter)$/", "group": "1_add@1" },
+        { "command": "vsproj.addNewItem", "when": "view == vsprojSolution && viewItem =~ /^(project|filter)$/", "group": "1_add@2" },
+        { "command": "vsproj.setStartupProject", "when": "view == vsprojSolution && viewItem == project", "group": "2_project@1" },
+        { "command": "vsproj.openProjectFile", "when": "view == vsprojSolution && viewItem == project", "group": "2_project@2" },
+        { "command": "vsproj.removeItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove" }
+      ],
+      "explorer/context": [
+        { "command": "vsproj.addToProject", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "7_modification" }
+      ]
+    },
+    "taskDefinitions": [{ "type": "vsproj", "properties": { "label": { "type": "string" } } }],
+    "problemMatchers": [
+      {
+        "name": "vsproj-gcc",
+        "owner": "vsproj",
+        "fileLocation": ["autoDetect", "${workspaceFolder}"],
+        "pattern": { "regexp": "^(.*?):(\\d+):(\\d+):\\s+(warning|error|fatal error):\\s+(.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 }
+      }
+    ],
+    "configuration": {
+      "title": "Visual Studio C++ Solutions",
+      "properties": {
+        "vsproj.configuration": { "type": "string", "enum": ["Debug", "Release"], "default": "Debug", "description": "Build configuration used by Build and Run." },
+        "vsproj.platform": { "type": "string", "enum": ["x64", "x86"], "default": "x64", "description": "Platform used by Build and Run." },
+        "vsproj.compiler": { "type": "string", "default": "g++", "description": "Compiler used to build and run on this computer." },
+        "vsproj.windowsCompiler": { "type": "string", "default": "", "description": "Cross compiler that makes the Windows .exe when packaging. Empty picks x86_64-w64-mingw32-g++ (x64) or i686-w64-mingw32-g++ (x86)." },
+        "vsproj.extraFlags": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Extra compiler flags added to every build." },
+        "vsproj.solutionFormat": { "type": "string", "enum": ["slnx", "sln"], "default": "slnx", "description": "Solution file format for new projects." },
+        "vsproj.submission.name": { "type": "string", "default": "", "description": "Name used in the submission folder names ({name})." },
+        "vsproj.submission.sourceFolder": { "type": "string", "default": "Source - {name}", "description": "Name of the source folder. {name} and {project} are replaced." },
+        "vsproj.submission.releaseFolder": { "type": "string", "default": "Release - {name}", "description": "Name of the release folder. {name} and {project} are replaced." },
+        "vsproj.submission.solutionName": { "type": "string", "default": "", "description": "File name (without extension) for the solution in the source folder. Empty keeps the current name." },
+        "vsproj.checkForUpdates": { "type": "boolean", "default": true, "description": "Look for a newer release once a day." }
+      }
+    },
+    "configurationDefaults": {
+      "[cpp]": { "editor.tabSize": 4, "editor.insertSpaces": true, "editor.detectIndentation": false },
+      "files.eol": "\r\n"
+    }
+  }
+}

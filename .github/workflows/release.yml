@@ -1,0 +1,58 @@
+# Every merge to main publishes a release: the extension (.vsix) and the whole tool as a .tar.gz, which `ide update` downloads.
+# The version is the year, the month and a counter: v2026.11.0, v2026.11.1, ... (the counter restarts each month).
+# Documentation-only changes do not release. "Run workflow" in the Actions tab releases the current main on demand.
+name: Release
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Work out the next version
+        id: next
+        run: |
+          prefix="v$(date -u +%Y.%-m)."
+          last=$(git tag -l "${prefix}*" | sed "s/^${prefix}//" | sort -n | tail -1)
+          tag="${prefix}$(( ${last:--1} + 1 ))"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag"
+      - name: Create the release (this also creates the tag)
+        run: gh release create "${{ steps.next.outputs.tag }}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "${{ steps.next.outputs.tag }}" --generate-notes
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+
+  assets:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++-mingw-w64-x86-64-posix
+      - run: npm test
+      - name: Build the files
+        env:
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          version="${TAG#v}"
+          (cd extension && npm pkg set version="$version")
+          mkdir -p out
+          node scripts/pack-vsix.js "out/ide-of-doom-and-destruction-${version}.vsix"
+          tar -czf "out/ide-of-doom-and-destruction-${version}.tar.gz" bin config extension scripts package.json README.md LICENSE
+          cp "out/ide-of-doom-and-destruction-${version}.tar.gz" out/ide-of-doom-and-destruction.tar.gz
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: gh release upload "$TAG" out/* --repo "$GITHUB_REPOSITORY" --clobber

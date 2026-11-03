@@ -1,0 +1,41 @@
+# Checks on every push to main only (other branches are not built): the unit tests with a real compiler and cross compiler,
+# and that a project this tool creates (new Console App + Add Class) builds with Microsoft's own MSBuild.
+name: Check
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++-mingw-w64-x86-64-posix
+      - run: npm test
+
+  msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: microsoft/setup-msbuild@v2
+      - name: Create a sample solution
+        run: node scripts/make-sample.js sample
+      - name: Build it with MSBuild (the project asks for the newest toolset; fall back to the one the runner has)
+        shell: pwsh
+        run: |
+          msbuild sample/Sample/Sample/Sample.vcxproj /p:Configuration=Release /p:Platform=x64
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Retrying with the v143 toolset"
+            msbuild sample/Sample/Sample/Sample.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+      - name: Run it
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse sample -Filter Sample.exe | Select-Object -First 1
+          $out = & $exe.FullName
+          if ($out -ne 'board 10') { throw "unexpected output: $out" }

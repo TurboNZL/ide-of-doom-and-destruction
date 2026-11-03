@@ -1,0 +1,3 @@
+#!/bin/sh
+# Stand-in for the Windows "cls" command so system("cls") works in the terminal.
+printf '\033[2J\033[H'

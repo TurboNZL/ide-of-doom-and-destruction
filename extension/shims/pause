@@ -1,0 +1,7 @@
+#!/bin/sh
+# Stand-in for the Windows "pause" command so system("pause") works in the terminal.
+printf 'Press any key to continue . . . '
+stty -echo -icanon 2>/dev/null
+dd bs=1 count=1 >/dev/null 2>&1
+stty echo icanon 2>/dev/null
+printf '\n'
