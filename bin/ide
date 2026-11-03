@@ -11,7 +11,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-HOME_DIR="${IDE_HOME:-$ROOT/vscode}"
+# A git clone keeps the editor next to the tool; a .deb install (read-only /opt) keeps it in the user's own data folder.
+if [ -n "${IDE_HOME:-}" ]; then HOME_DIR="$IDE_HOME"
+elif [ -w "$ROOT" ]; then HOME_DIR="$ROOT/vscode"
+else HOME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ide-of-doom-and-destruction/vscode"; fi
+DIST_DIR="$(dirname "$HOME_DIR")/dist"
 REPO="TurboNZL/ide-of-doom-and-destruction"
 CODE="$HOME_DIR/code"
 CODE_CLI="$HOME_DIR/bin/code"
@@ -51,9 +55,9 @@ download_editor() {
 }
 
 install_extensions() {
-  local vsix="$ROOT/dist/ide-of-doom-and-destruction.vsix"
+  local vsix="$DIST_DIR/ide-of-doom-and-destruction.vsix"
   say "Building the extension..."
-  mkdir -p "$ROOT/dist"
+  mkdir -p "$DIST_DIR"
   run_node "$ROOT/scripts/pack-vsix.js" "$vsix" >&2
   "$CODE_CLI" --install-extension "$vsix" --force >&2
   while read -r ext; do
@@ -61,6 +65,19 @@ install_extensions() {
     case "$ext" in \#*) continue ;; esac
     "$CODE_CLI" --install-extension "$ext" >&2 || say "Could not install $ext (you can add it later from the Extensions view)."
   done < "$ROOT/config/extensions.txt"
+  tool_version > "$HOME_DIR/data/.extension-version"
+}
+
+# The version of the tool this launcher belongs to (0.0.0 for a plain checkout).
+tool_version() {
+  sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$ROOT/extension/package.json" | head -1
+}
+
+# After a .deb update the tool changed but the extension inside the editor is the old one: install the new one.
+sync_extension() {
+  [ "$(tool_version)" = "$(cat "$HOME_DIR/data/.extension-version" 2>/dev/null || true)" ] && return 0
+  say "Updating the editor's extension to $(tool_version)..."
+  install_extensions
 }
 
 apply_settings() {
@@ -84,6 +101,10 @@ cmd_setup() {
 }
 
 cmd_update() {
+  if [ ! -w "$ROOT" ]; then
+    die "This copy was installed from the .deb, which updates from the Updates window (command palette: Updates...), or with:
+      curl -fLO https://github.com/$REPO/releases/latest/download/ide-of-doom-and-destruction.deb && sudo apt install ./ide-of-doom-and-destruction.deb"
+  fi
   if [ -d "$ROOT/.git" ]; then
     need git
     git -C "$ROOT" pull --ff-only
@@ -106,7 +127,10 @@ case "${1:-}" in
   -h|--help|help)
     sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
   *)
-    [ -x "$CODE" ] || die "The editor is not installed yet. Run: $ROOT/bin/ide setup"
+    if [ ! -x "$CODE" ]; then
+      if [ -t 0 ]; then cmd_setup; else die "The editor is not installed yet. Run: ide setup"; fi
+    fi
+    sync_extension
     if [ $# -eq 0 ]; then set -- .; fi
     exec "$CODE" "$@" ;;
 esac

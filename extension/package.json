@@ -27,7 +27,8 @@
       { "command": "vsproj.openProjectFile", "title": "Open Project File (.vcxproj)", "category": "VS" },
       { "command": "vsproj.refresh", "title": "Refresh Solution Explorer", "category": "VS", "icon": "$(refresh)" },
       { "command": "vsproj.package", "title": "Package for Submission...", "category": "VS" },
-      { "command": "vsproj.checkForUpdates", "title": "Check for Updates", "category": "VS" }
+      { "command": "vsproj.checkForUpdates", "title": "Updates...", "category": "VS" },
+      { "command": "vsproj.signInGitHub", "title": "Sign in to GitHub", "category": "VS" }
     ],
     "keybindings": [
       { "command": "vsproj.run", "key": "f5", "when": "vsproj.hasSolution" },

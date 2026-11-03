@@ -1,3 +1,5 @@
 # Extensions installed next to this tool's own, one per line.
 # clangd gives completion, error squiggles and formatting from the compile_commands.json this tool writes.
 llvm-vs-code-extensions.vscode-clangd
+# Pull requests and issues next to the built-in Git support; sign-in uses the built-in GitHub authentication.
+GitHub.vscode-pull-request-github

@@ -1,4 +1,4 @@
-# Every merge to main publishes a release: the extension (.vsix) and the whole tool as a .tar.gz, which `ide update` downloads.
+# Every merge to main publishes a release: the .deb (what the Updates window installs), the extension (.vsix), and the whole tool as a .tar.gz.
 # The version is the year, the month and a counter: v2026.11.0, v2026.11.1, ... (the counter restarts each month).
 # Documentation-only changes do not release. "Run workflow" in the Actions tab releases the current main on demand.
 name: Release
@@ -49,8 +49,10 @@ jobs:
           (cd extension && npm pkg set version="$version")
           mkdir -p out
           node scripts/pack-vsix.js "out/ide-of-doom-and-destruction-${version}.vsix"
-          tar -czf "out/ide-of-doom-and-destruction-${version}.tar.gz" bin config extension scripts package.json README.md LICENSE
+          tar -czf "out/ide-of-doom-and-destruction-${version}.tar.gz" bin config extension packaging scripts package.json README.md LICENSE
           cp "out/ide-of-doom-and-destruction-${version}.tar.gz" out/ide-of-doom-and-destruction.tar.gz
+          bash scripts/build-deb.sh "$version" "out/ide-of-doom-and-destruction-${version}.deb"
+          cp "out/ide-of-doom-and-destruction-${version}.deb" out/ide-of-doom-and-destruction.deb
       - name: Attach them to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

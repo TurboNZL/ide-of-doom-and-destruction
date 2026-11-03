@@ -20,6 +20,18 @@ The `.vcxproj` is the source of truth: the file list, language standard, warning
 
 ## Install
 
+### .deb (Debian, Ubuntu and friends)
+
+Download `ide-of-doom-and-destruction.deb` from the [latest release](https://github.com/TurboNZL/ide-of-doom-and-destruction/releases/latest) and install it:
+
+```bash
+sudo apt install ./ide-of-doom-and-destruction.deb
+```
+
+Open **C++ Solutions Editor** from the application menu, or run `ide <folder>`. The first start downloads the editor into your own data folder (`~/.local/share/ide-of-doom-and-destruction`), so each user gets a private copy and the package never touches a normal VS Code install. Removing the package leaves that folder alone.
+
+### From a clone
+
 Needs `bash`, `curl`, `tar` and a C++ compiler (`g++`). For the Windows `.exe` in **Package for Submission**, also `g++-mingw-w64-x86-64-posix`.
 
 ```bash
@@ -50,22 +62,26 @@ Debian/Ubuntu: `sudo apt install g++ g++-mingw-w64-x86-64-posix`.
 
 IntelliSense, completion and formatting come from [clangd](https://clangd.llvm.org/), installed by `ide setup`.
 
+## GitHub
+
+- **Sign in:** the Accounts icon (bottom left) > *Sign in with GitHub*, or the command **VS: Sign in to GitHub**. It opens your browser; the login is kept in your system keyring (`gnome-keyring` or KWallet).
+- **Source control:** a new project starts as a git repository on `main`. Use the Source Control view to commit, and **Publish to GitHub** to create the repository. Pushing and pulling use the signed-in account, no tokens to paste.
+- **Pull requests and issues:** the GitHub Pull Requests extension is installed with the editor.
+
 ## Updates
 
-```bash
-ide update
-```
+Command palette > **VS: Updates...** opens the Updates window: installed and latest version, the release notes, **Download** and **Install**. Installing asks for your password through the desktop's prompt, and falls back to a terminal running `sudo` when there is no prompt. It only reports success once `dpkg` shows the new version, and if nothing works it shows the one command to copy. **Restart now** reopens the editor on the same folder with the new extension.
 
-pulls the newest version (`git pull` for a clone, or the latest release for a download) and reinstalls the extension. The editor also checks once a day and says when a newer release exists (setting `vsproj.checkForUpdates`).
+The editor checks once a day and offers to open the window when a newer release exists (setting `vsproj.checkForUpdates`). A copy installed from a clone updates with `ide update` (`git pull` and a reinstall of the extension).
 
-Every merge to `main` becomes a release (`vYYYY.M.N`) with the extension (`.vsix`) and the whole tool (`.tar.gz`) attached.
+Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`) and the whole tool (`.tar.gz`) attached.
 
 ## What it does not do
 
 - No debugger (breakpoints, stepping). Run and read the output.
 - Console `Application` projects only; no libraries, no project references, no property sheets, no precompiled headers, no resource files.
 - The compiler is GCC, not MSVC, so the odd thing MSVC accepts or rejects will differ. Before handing something in, build it once in Visual Studio, or let the CI in a private copy of your project do it with `msbuild` on a Windows runner.
-- Linux only (x64 and arm64).
+- Linux only (x64 and arm64). The package is for Debian-family systems; other distributions use the clone.
 
 ## Developing
 

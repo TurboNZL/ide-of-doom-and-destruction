@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cp = require('child_process');
 const { detectEol, withEol, splitBom, toSlash } = require('./text');
 const vcx = require('./vcxproj');
 const sln = require('./solution');
@@ -71,6 +72,13 @@ function createProject({ location, name, solutionFormat = 'slnx' }) {
   fs.writeFileSync(path.join(root, '.gitignore'), tpl.gitignore());
   fs.writeFileSync(path.join(root, '.gitattributes'), tpl.gitattributes());
   return solutionFile;
+}
+
+/** Starts a git repository (branch main) in `dir`. Returns true when one was created; false when git is missing or it was already a repository. */
+function gitInit(dir) {
+  if (fs.existsSync(path.join(dir, '.git'))) return false;
+  const r = cp.spawnSync('git', ['init', '-b', 'main'], { cwd: dir, encoding: 'utf8' });
+  return !r.error && r.status === 0;
 }
 
 /** Reads a file, changes it, and writes it back with its byte order mark and line endings untouched. */
@@ -157,5 +165,5 @@ function writeCompileCommands(solution, opts) {
 
 module.exports = {
   isValidIdentifier, isValidProjectName, loadSolution, loadProject, createProject, addFile, removeFile, addClass, addItem,
-  untrackedFiles, writeCompileCommands
+  untrackedFiles, writeCompileCommands, gitInit
 };

@@ -4,13 +4,12 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 const { shellQuote } = require('./lib/text');
 const ws = require('./lib/workspace');
 const { planBuild, CROSS_COMPILERS } = require('./lib/build');
 const { packageSubmission } = require('./lib/submission');
-
-const REPO = 'TurboNZL/ide-of-doom-and-destruction';
+const up = require('./lib/updater');
+const { UpdateWindow } = require('./updateWindow');
 
 let context;
 let solution = null; // loaded solution, or null
@@ -18,6 +17,7 @@ let startupName = null;
 let statusItem;
 let tree;
 let runTerminal;
+let updates;
 const output = { channel: null };
 
 // ---------------------------------------------------------------------------------------
@@ -279,6 +279,7 @@ async function cmdNewProject() {
   if (!picked || !picked.length) return;
   try {
     const file = ws.createProject({ location: picked[0].fsPath, name, solutionFormat: cfg().get('solutionFormat') });
+    ws.gitInit(path.dirname(file)); // so Source Control works straight away; publishing to GitHub is one click from there
     await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(path.dirname(file)), { forceNewWindow: false });
   } catch (e) { fail(e); }
 }
@@ -387,48 +388,30 @@ async function cmdPackage() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Updates
+// Updates and GitHub
 
-function latestRelease() {
-  return new Promise((resolve, reject) => {
-    const req = https.get({
-      host: 'api.github.com', path: '/repos/' + REPO + '/releases/latest',
-      headers: { 'User-Agent': 'vsproj-tools', Accept: 'application/vnd.github+json' }, timeout: 8000
-    }, (res) => {
-      let body = '';
-      res.on('data', (d) => (body += d));
-      res.on('end', () => {
-        if (res.statusCode !== 200) return reject(new Error('GitHub answered ' + res.statusCode));
-        try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
-      });
-    });
-    req.on('timeout', () => req.destroy(new Error('timed out')));
-    req.on('error', reject);
-  });
+function cmdUpdates() {
+  updates.show(true);
 }
 
-function newer(a, b) {
-  const x = a.replace(/^v/, '').split('.').map(Number);
-  const y = b.replace(/^v/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
-  return false;
-}
-
-async function cmdCheckForUpdates(silent) {
+/** Quiet check once a day; only speaks up when there is something to install. */
+async function backgroundCheck() {
   try {
-    const rel = await latestRelease();
+    const rel = await up.latestRelease();
     const current = context.extension.packageJSON.version;
-    if (current === '0.0.0') {
-      if (!silent) vscode.window.showInformationMessage('Installed from source. Run "ide update" to pull the latest (newest release: ' + rel.tag_name + ').');
-      return;
+    if (rel && current !== '0.0.0' && up.isNewer(rel.version, current)) {
+      const pick = await vscode.window.showInformationMessage('Version ' + rel.version + ' is available (you have ' + current + ').', 'Open Updates');
+      if (pick) updates.show(true);
     }
-    if (newer(rel.tag_name, current)) {
-      const pick = await vscode.window.showInformationMessage(
-        'A newer version is available (' + rel.tag_name + ', you have ' + current + '). Run "ide update" in a terminal, then restart.', 'Release Page');
-      if (pick) vscode.env.openExternal(vscode.Uri.parse(rel.html_url));
-    } else if (!silent) vscode.window.showInformationMessage('You are up to date (' + current + ').');
+  } catch (e) { log('Update check failed: ' + e.message); }
+}
+
+async function cmdSignInGitHub() {
+  try {
+    const session = await vscode.authentication.getSession('github', ['repo', 'workflow'], { createIfNone: true });
+    vscode.window.showInformationMessage('Signed in to GitHub as ' + session.account.label + '.');
   } catch (e) {
-    if (!silent) vscode.window.showWarningMessage('Could not check for updates: ' + e.message);
+    vscode.window.showWarningMessage('GitHub sign-in did not finish: ' + e.message);
   }
 }
 
@@ -447,6 +430,7 @@ async function setClangdDefaults() {
 function activate(ctx) {
   context = ctx;
   tree = new SolutionTree();
+  updates = new UpdateWindow(ctx);
   statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
   statusItem.command = 'vsproj.setConfiguration';
   statusItem.tooltip = 'Select configuration and platform';
@@ -466,7 +450,8 @@ function activate(ctx) {
   reg('vsproj.openProjectFile', cmdOpenProjectFile);
   reg('vsproj.refresh', reload);
   reg('vsproj.package', cmdPackage);
-  reg('vsproj.checkForUpdates', () => cmdCheckForUpdates(false));
+  reg('vsproj.checkForUpdates', cmdUpdates);
+  reg('vsproj.signInGitHub', cmdSignInGitHub);
 
   ctx.subscriptions.push(statusItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));
 
@@ -483,7 +468,7 @@ function activate(ctx) {
   const last = ctx.globalState.get('lastUpdateCheck') || 0;
   if (cfg().get('checkForUpdates') && Date.now() - last > day) {
     ctx.globalState.update('lastUpdateCheck', Date.now());
-    cmdCheckForUpdates(true);
+    backgroundCheck();
   }
 }
 

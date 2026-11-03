@@ -1,0 +1,18 @@
+#!/bin/sh
+# Start menu entry: sets the editor up in a terminal the first time (it downloads VS Code), then opens it.
+ide="$(dirname "$(readlink -f "$0")")/ide"
+home="$("$ide" where)"
+if [ ! -x "$home/code" ]; then
+  script="\"$ide\" setup; printf 'Press Enter to close this window... '; read _"
+  for t in x-terminal-emulator gnome-terminal konsole xfce4-terminal xterm; do
+    command -v "$t" >/dev/null 2>&1 || continue
+    case "$t" in
+      gnome-terminal) "$t" --wait -- sh -c "$script" ;;
+      xfce4-terminal) "$t" --disable-server -x sh -c "$script" ;;
+      *) "$t" -e sh -c "$script" ;;
+    esac
+    break
+  done
+fi
+[ -x "$home/code" ] || exit 1
+exec "$ide" "$@"

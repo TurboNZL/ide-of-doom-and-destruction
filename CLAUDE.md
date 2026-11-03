@@ -17,6 +17,9 @@ A portable VS Code (downloaded by `bin/ide setup` into `./vscode`, portable via 
 | IntelliSense | clangd, reading `<solution>/.vs/compile_commands.json` (`.vs/` is already ignored by Visual Studio's `.gitignore`). Never write tool files into the user's repo. |
 | Isolation | Never touch the user's normal VS Code. Portable mode only; keybindings, menus and defaults come from the extension (so an update replaces them), `config/settings.json` is copied only if absent. |
 | Public repo hygiene | The repo is public and names nobody but the owner (TurboNZL). No personal, institutional or project-specific text in the code, docs or tests (tests build their own sample project). Anything that varies per user, such as submission folder names, is a setting with a neutral default. |
+| Packaging | One architecture-independent `.deb` (`scripts/build-deb.sh`, `packaging/`): the tool in `/opt/ide-of-doom-and-destruction`, `/usr/bin/ide`, a menu entry. It never ships VS Code; the editor is downloaded per user into `~/.local/share/ide-of-doom-and-destruction/` (read-only `/opt` selects that path in `bin/ide`). After a package update `bin/ide` reinstalls the extension when `data/.extension-version` differs from the package's version. |
+| Updates | The engine's `updaters` rules, ported to `extension/lib/debInstall.js` + `updater.js` (find newest release incl. pre-releases, skip drafts; download; pkexec, then sudo terminal, `systemd-run --user` when `NoNewPrivs`; success only when `dpkg-query` shows the new version; always show the copyable command). The window is a webview panel (`extension/updateWindow.js`), not Electron, so there is no `latest-linux.yml`: the release's `.deb` asset is the manifest, and "release exists, `.deb` not attached yet" is the still-being-built state. |
+| GitHub | VS Code's built-in Git and GitHub authentication, configured in `config/settings.json`, plus the Pull Requests extension and a `vsproj.signInGitHub` command. New projects get `git init -b main`. No tokens are stored by this tool. |
 | Dependencies | None at runtime (the `.vsix` is packed by `scripts/pack-vsix.js`; no `vsce`). |
 
 ## Repo layout
@@ -26,6 +29,8 @@ A portable VS Code (downloaded by `bin/ide setup` into `./vscode`, portable via 
 - `extension/shims/`: `cls`, `pause`, `color` for programs that call `system(...)`.
 - `scripts/`: `pack-vsix.js`, `make-sample.js` (CI).
 - `test/`: `npm test`.
+- `extension/updateWindow.js`, `extension/lib/{updater,debInstall}.js`: the Updates window.
+- `packaging/`, `scripts/build-deb.sh`, `bin/ide-desktop`: the `.deb`.
 - `.github/workflows/`: `auto-pr`, `check` (tests + MSBuild on Windows), `release`.
 
 ## What exists and is tested
@@ -34,6 +39,9 @@ Everything under `extension/lib/`, the launcher (against a stand-in editor), the
 ## Not tested (no real editor available when this was written)
 The VS Code UI itself: tree view rendering, the task/problem-matcher wiring, keybinding precedence over built-ins, the clangd settings write, the real VS Code download. First thing to do with a real editor: run `ide setup`, open a project, press F5, break the code on purpose and check the Problems panel.
 
+## Also untested on a real desktop
+The Updates window rendering, the real polkit prompt and terminal fallback, GitHub sign-in through the browser and keyring, and Publish to GitHub. The `.deb` itself was built, installed, queried with `dpkg-query` and removed in a test container; the install helpers are tested with the system calls replaced.
+
 ## Hard-won gotchas
 - Node 22 `node --test` does not take a bare directory; the test script uses a glob.
 - A `.vsix` entry loses its executable bit unless the zip records a Unix mode (`zip.js` does); the extension also `chmod`s the shims before use.
@@ -41,3 +49,4 @@ The VS Code UI itself: tree view rendering, the task/problem-matcher wiring, key
 
 ## Session log
 - First version: all of the above.
+- Added the `.deb`, the Updates window and the GitHub setup.
