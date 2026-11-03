@@ -9,6 +9,8 @@ const ws = require('./lib/workspace');
 const { planBuild, CROSS_COMPILERS } = require('./lib/build');
 const { packageSubmission } = require('./lib/submission');
 const up = require('./lib/updater');
+const term = require('./lib/terminal');
+const wine = require('./lib/wine');
 const { UpdateWindow } = require('./updateWindow');
 const startPage = require('./startPage');
 
@@ -155,6 +157,32 @@ async function cmdBuild() {
   return last;
 }
 
+/** Runs a shell script in a terminal window (the user's own terminal app), or in the editor's terminal if the setting says so or none exists. */
+async function runScript(name, cwd, script, plainCommand) {
+  if (cfg().get('runIn') !== 'integratedTerminal') {
+    const started = await term.runInTerminal(script, { custom: cfg().get('terminal'), cwd });
+    if (started) return;
+    vscode.window.showWarningMessage('No terminal application was found, so the program runs in the editor\'s terminal. Set one in the "vsproj.terminal" setting.');
+  }
+  if (runTerminal) runTerminal.dispose();
+  runTerminal = vscode.window.createTerminal({ name, cwd });
+  runTerminal.show(false);
+  runTerminal.sendText(plainCommand);
+}
+
+function shimsDir() {
+  const shims = path.join(context.extensionPath, 'shims');
+  try { for (const f of fs.readdirSync(shims)) fs.chmodSync(path.join(shims, f), 0o755); } catch (e) { log('Could not make the shims executable: ' + e.message); }
+  return shims;
+}
+
+async function runNative(project, plan) {
+  const shims = shimsDir();
+  const script = term.programScript({ name: project.name, cwd: project.dir, command: shellQuote(plan.outFile), pathPrefix: shims });
+  const plain = 'PATH=' + shellQuote(shims) + ':"$PATH" ' + shellQuote(plan.outFile) + '; code=$?; echo; echo "[' + project.name + ' exited with code $code]"';
+  await runScript(project.name, project.dir, script, 'clear; ' + plain);
+}
+
 async function cmdRun() {
   if (!needSolution()) return;
   await vscode.workspace.saveAll(false);
@@ -163,12 +191,44 @@ async function cmdRun() {
   if (project.configurationType !== 'Application') { vscode.window.showWarningMessage(project.name + ' is not an application project.'); return; }
   const plan = await buildProject(project, buildOpts('native'));
   if (!plan) return;
+  await runNative(project, plan);
+}
+
+/** Runs an .exe with Wine in the prefix saved in this tool's data folder. */
+async function runInWine(name, exe, cwd) {
+  const w = wine.findWine();
+  if (!w) { vscode.window.showErrorMessage(wine.INSTALL_HINT); return; }
+  const script = term.programScript({ name, cwd, command: wine.wineCommand(w, exe), extra: wine.wineSetup() });
+  const started = await term.runInTerminal(script, { custom: cfg().get('terminal'), cwd });
+  if (started) return;
   if (runTerminal) runTerminal.dispose();
-  const shims = path.join(context.extensionPath, 'shims');
-  try { for (const f of fs.readdirSync(shims)) fs.chmodSync(path.join(shims, f), 0o755); } catch (e) { log('Could not make the shims executable: ' + e.message); }
-  runTerminal = vscode.window.createTerminal({ name: project.name, cwd: project.dir, env: { PATH: shims + path.delimiter + (process.env.PATH || '') } });
+  runTerminal = vscode.window.createTerminal({ name: name + ' (Wine)', cwd });
   runTerminal.show(false);
-  runTerminal.sendText('clear; ' + shellQuote(plan.outFile) + '; code=$?; echo; echo "[' + project.name + ' exited with code $code]"');
+  runTerminal.sendText(wine.wineSetup() + wine.wineCommand(w, exe));
+}
+
+/** Builds the Windows .exe (cross compiler) and runs it under Wine. */
+async function cmdRunWindowsBuild() {
+  if (!needSolution()) return;
+  await vscode.workspace.saveAll(false);
+  reload();
+  const project = startupProject();
+  if (project.configurationType !== 'Application') { vscode.window.showWarningMessage(project.name + ' is not an application project.'); return; }
+  const opts = buildOpts('windows');
+  const plan = await buildProject(project, opts);
+  if (plan) await runInWine(project.name, plan.outFile, project.dir);
+}
+
+/** Runs any .exe (for example the one in a packaged submission) under Wine. */
+async function cmdRunExe(uri) {
+  let file = uri && uri.fsPath;
+  if (!file) {
+    const start = solution ? vscode.Uri.file(path.join(solution.dir, 'Submission')) : undefined;
+    const picked = await vscode.window.showOpenDialog({ canSelectMany: false, defaultUri: start, filters: { 'Windows programs': ['exe'] }, openLabel: 'Run in Wine' });
+    if (!picked || !picked.length) return;
+    file = picked[0].fsPath;
+  }
+  await runInWine(path.basename(file), file, path.dirname(file));
 }
 
 async function cmdClean() {
@@ -386,8 +446,9 @@ async function cmdPackage() {
         solutionName: cfg().get('submission.solutionName'), platform: opts.platform, compiler: opts.compiler
       });
       log('Packaged:\n  ' + r.sourceDir + '\n  ' + r.releaseDir);
-      const open = await vscode.window.showInformationMessage('Packaged to ' + path.join(solution.dir, 'Submission') + '. Edit Readme.txt in the release folder before handing it in.', 'Open Readme.txt', 'Show Folder');
+      const open = await vscode.window.showInformationMessage('Packaged to ' + path.join(solution.dir, 'Submission') + '. Edit Readme.txt in the release folder before handing it in.', 'Open Readme.txt', 'Show Folder', 'Test the .exe in Wine');
       if (open === 'Open Readme.txt') await vscode.window.showTextDocument(vscode.Uri.file(path.join(r.releaseDir, 'Readme.txt')));
+      if (open === 'Test the .exe in Wine') await runInWine(path.basename(r.exe), r.exe, r.releaseDir);
       if (open === 'Show Folder') await vscode.env.openExternal(vscode.Uri.file(path.dirname(r.releaseDir)));
     } catch (e) { fail(e); }
   });
@@ -418,6 +479,8 @@ async function cmdMenu() {
     { label: '$(add) New Console App...', command: 'vsproj.newProject' },
     { label: '$(play) Run (build and run)', command: 'vsproj.run', needs: true },
     { label: '$(tools) Build', command: 'vsproj.build', needs: true },
+    { label: '$(window) Run the Windows build in Wine', command: 'vsproj.runWindowsBuild', needs: true },
+    { label: '$(file-binary) Run an .exe in the Wine prefix...', command: 'vsproj.runExeInPrefix' },
     { label: '$(symbol-class) Add Class...', command: 'vsproj.addClass', needs: true },
     { label: '$(new-file) Add New Item...', command: 'vsproj.addNewItem', needs: true },
     { label: '$(gear) Configuration and platform...', command: 'vsproj.setConfiguration', needs: true },
@@ -491,6 +554,8 @@ function activate(ctx) {
   reg('vsproj.checkForUpdates', cmdUpdates);
   reg('vsproj.signInGitHub', cmdSignInGitHub);
   reg('vsproj.menu', cmdMenu);
+  reg('vsproj.runWindowsBuild', cmdRunWindowsBuild);
+  reg('vsproj.runExeInPrefix', cmdRunExe);
   reg('vsproj.startPage', () => startPage.show());
 
   ctx.subscriptions.push(statusItem, runItem, buildItem, menuItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));

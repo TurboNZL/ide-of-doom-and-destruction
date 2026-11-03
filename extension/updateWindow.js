@@ -14,7 +14,7 @@ class UpdateWindow {
   constructor(context) {
     this.context = context;
     this.panel = null;
-    this.state = { phase: 'idle', current: '', latest: '', notes: '', url: '', message: '', command: '', progress: 0, canInstall: false, mode: '' };
+    this.state = { phase: 'idle', current: '', latest: '', notes: '', url: '', message: '', command: '', progress: 0, canInstall: false, canUpdate: false, log: '', mode: '' };
     this.release = null;
     this.file = null;
     this.busy = false;
@@ -51,6 +51,7 @@ class UpdateWindow {
     else if (m.type === 'check') await this.check();
     else if (m.type === 'download') await this.download();
     else if (m.type === 'install') await this.install();
+    else if (m.type === 'updateNow') await this.updateNow();
     else if (m.type === 'copy' && typeof this.state.command === 'string') {
       await vscode.env.clipboard.writeText(this.state.command);
       vscode.window.showInformationMessage('Copied.');
@@ -62,7 +63,7 @@ class UpdateWindow {
   async check() {
     if (this.busy) return null;
     this.busy = true;
-    this.set({ phase: 'checking', message: '', command: '', progress: 0, canInstall: false, current: this.currentVersion(), mode: this.mode() });
+    this.set({ phase: 'checking', message: '', command: '', progress: 0, canInstall: false, canUpdate: false, log: '', current: this.currentVersion(), mode: this.mode() });
     try {
       const r = await up.latestRelease();
       this.release = r;
@@ -71,7 +72,7 @@ class UpdateWindow {
       const base = { latest: r.version, notes: r.notes, url: r.url };
       if (!newer) { this.set({ ...base, phase: 'uptodate', message: 'You have the newest version.' }); return null; }
       if (this.state.mode !== 'deb') {
-        this.set({ ...base, phase: 'manual', message: 'Version ' + r.version + ' is available. This copy was not installed from the .deb, so update it from a terminal:', command: 'ide update' });
+        this.set({ ...base, phase: 'manual', canUpdate: true, message: 'Version ' + r.version + ' is available. This copy was not installed from the .deb (a clone or a download), so it updates itself in place.' });
         return r;
       }
       if (!r.asset) {
@@ -105,6 +106,28 @@ class UpdateWindow {
     } finally {
       this.busy = false;
     }
+  }
+
+  /** Non-.deb copies: run the launcher's own update (git pull or the release download, then the extension) and show its output. */
+  async updateNow() {
+    if (this.busy) return;
+    this.busy = true;
+    const bin = process.env.IDE_BIN || 'ide';
+    this.set({ phase: 'installing', message: 'Updating...', canUpdate: false, log: '', command: '' });
+    await new Promise((resolve) => {
+      const child = cp.spawn(bin, ['update'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let log = '';
+      const add = (d) => { log = (log + String(d)).slice(-4000); this.set({ log }); };
+      child.stdout.on('data', add);
+      child.stderr.on('data', add);
+      child.on('error', (e) => { this.set({ phase: 'failed', message: 'Could not run the updater: ' + e.message, command: 'ide update' }); resolve(); });
+      child.on('close', (code) => {
+        if (code === 0) this.set({ phase: 'installed', message: 'Updated. Restart the editor to use the new version.', current: this.release ? this.release.version : this.state.current });
+        else this.set({ phase: 'failed', message: 'The update failed (exit code ' + code + '). You can run it yourself:', command: 'ide update', canUpdate: true });
+        resolve();
+      });
+    });
+    this.busy = false;
   }
 
   async install() {
@@ -152,10 +175,12 @@ progress{width:100%;height:8px;margin:12px 0} pre{background:var(--vscode-textCo
 <p id="msg"></p>
 <progress id="bar" class="hidden" max="100" value="0"></progress>
 <pre id="cmd" class="hidden"></pre>
+<pre id="log" class="hidden"></pre>
 <div>
 <button id="check">Check again</button>
 <button id="download" class="hidden">Download</button>
 <button id="install" class="hidden">Install</button>
+<button id="updateNow" class="hidden">Update now</button>
 <button id="copy" class="secondary hidden">Copy command</button>
 <button id="restart" class="hidden">Restart now</button>
 <button id="open" class="secondary hidden">Release page</button>
@@ -165,7 +190,7 @@ progress{width:100%;height:8px;margin:12px 0} pre{background:var(--vscode-textCo
 const vscode = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
 const show = (id, on) => $(id).classList.toggle('hidden', !on);
-for (const id of ['check','download','install','copy','restart','open']) $(id).addEventListener('click', () => vscode.postMessage({ type: id }));
+for (const id of ['check','download','install','updateNow','copy','restart','open']) $(id).addEventListener('click', () => vscode.postMessage({ type: id }));
 window.addEventListener('message', (e) => {
   if (e.data.type !== 'state') return;
   const s = e.data.state;
@@ -177,6 +202,8 @@ window.addEventListener('message', (e) => {
   show('download', s.phase === 'available' || s.phase === 'downloading');
   $('download').disabled = s.phase === 'downloading';
   show('install', s.canInstall);
+  show('updateNow', !!s.canUpdate);
+  show('log', !!s.log); $('log').textContent = s.log || '';
   show('bar', s.phase === 'downloading');
   $('bar').value = s.progress || 0;
   show('cmd', !!s.command); $('cmd').textContent = s.command || '';

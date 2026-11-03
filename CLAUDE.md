@@ -23,6 +23,9 @@ A portable VS Code (downloaded by `bin/ide setup` into `./vscode`, portable via 
 | No CLI for users | Everything a user does is reachable without a terminal: the menu entry (`bin/ide-desktop`, first-run progress window via `zenity`, `kdialog` popup fallback), the start page, the bottom-left **IDE of Doom** menu, Run/Build buttons in the editor title and status bar. Custom commands are all in the palette category **IDE of Doom** so they are recognisable. `bin/ide` stays as the script behind them. |
 | Release file names | No version in the file names (`ide-of-doom-and-destruction.deb/.vsix/.tar.gz`): each release is its own page and `/releases/latest/download/<name>` keeps working. The updater picks any `.deb` asset. |
 | App identity | Name "IDE of Doom and Destruction"; the editor is launched with `--class=ide-of-doom-and-destruction` and the desktop entry has the matching `StartupWMClass`, so the window groups under our entry instead of turning into plain VS Code. `window.restoreWindows` is `none` so a launch never reopens a previously opened home folder. |
+| Running programs | In a separate terminal window, found by `extension/lib/terminal.js` (setting, `$TERMINAL`, KDE's configured terminal, then a list), because the target distros vary (Debian family and Arch family). `vsproj.runIn` can switch to the editor's terminal. Windows `.exe`s run under Wine in `<data dir>/wine-prefix` (`IDE_DATA_DIR`, exported by the launcher), never `~/.wine`. |
+| Branding the editor | `scripts/brand-editor.js` edits only the private downloaded copy (`desktopName`, `nameShort/nameLong`, window icon; originals kept as `*.orig`), once per download (`data/.branded`). Do not do this to a user's normal VS Code. |
+| Other distros | No package yet: the release tarball + `ide setup` (which also runs `ide integrate` for the menu entry). The Updates window updates such copies in place by running `IDE_BIN update`. |
 | Dependencies | None at runtime (the `.vsix` is packed by `scripts/pack-vsix.js`; no `vsce`). |
 
 ## Repo layout
@@ -45,6 +48,9 @@ The VS Code UI itself: tree view rendering, the task/problem-matcher wiring, key
 ## Also untested on a real desktop
 The Updates window rendering, the real polkit prompt and terminal fallback, GitHub sign-in through the browser and keyring, and Publish to GitHub. The `.deb` itself was built, installed, queried with `dpkg-query` and removed in a test container; the install helpers are tested with the system calls replaced.
 
+## Also untested (second round)
+The external terminal windows on a real desktop, Wine prefix creation on first run, whether editing `desktopName` is what fixes the KDE window identity on Wayland and X11, and `ide integrate` on Arch.
+
 ## Hard-won gotchas
 - Node 22 `node --test` does not take a bare directory; the test script uses a glob.
 - A `.vsix` entry loses its executable bit unless the zip records a Unix mode (`zip.js` does); the extension also `chmod`s the shims before use.
@@ -55,4 +61,5 @@ The Updates window rendering, the real polkit prompt and terminal fallback, GitH
 - Added the `.deb`, the Updates window and the GitHub setup.
 - Fixed: the start-menu entry opened the home folder (git scan); git settings narrowed. GitHub sign-in turned out to work.
 - Start-menu/Open With entry, GUI first run, start page, Run/Build buttons, unversioned release names.
+- Removed the 120-column ruler (the white vertical line) and migrate it away. External terminal runs, Wine prefix, branding, `ide integrate`.
 - Unverified: that the window keeps our icon in KDE after it opens (relies on `--class` / `StartupWMClass`; VS Code may still set its own icon).

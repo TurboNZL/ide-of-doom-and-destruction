@@ -30,6 +30,8 @@
       { "command": "vsproj.checkForUpdates", "title": "Updates...", "category": "IDE of Doom" },
       { "command": "vsproj.menu", "title": "Show All Actions", "category": "IDE of Doom", "icon": "$(rocket)" },
       { "command": "vsproj.startPage", "title": "Start Page", "category": "IDE of Doom" },
+      { "command": "vsproj.runWindowsBuild", "title": "Run the Windows Build in Wine", "category": "IDE of Doom" },
+      { "command": "vsproj.runExeInPrefix", "title": "Run an .exe in the Wine Prefix...", "category": "IDE of Doom" },
       { "command": "vsproj.signInGitHub", "title": "Sign in to GitHub", "category": "IDE of Doom" }
     ],
     "keybindings": [
@@ -77,6 +79,7 @@
         { "command": "vsproj.removeItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove" }
       ],
       "explorer/context": [
+        { "command": "vsproj.runExeInPrefix", "when": "resourceExtname == .exe", "group": "7_modification" },
         { "command": "vsproj.addToProject", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "7_modification" }
       ]
     },
@@ -94,6 +97,8 @@
       "properties": {
         "vsproj.configuration": { "type": "string", "enum": ["Debug", "Release"], "default": "Debug", "description": "Build configuration used by Build and Run." },
         "vsproj.platform": { "type": "string", "enum": ["x64", "x86"], "default": "x64", "description": "Platform used by Build and Run." },
+        "vsproj.runIn": { "type": "string", "enum": ["externalTerminal", "integratedTerminal"], "default": "externalTerminal", "description": "Where Run shows the program: a separate terminal window (your default terminal app), or the editor's own terminal panel." },
+        "vsproj.terminal": { "type": "string", "default": "", "description": "Terminal app for external runs, for example konsole or \"alacritty -e\". Empty uses $TERMINAL, then your desktop's terminal, then the first one found." },
         "vsproj.compiler": { "type": "string", "default": "g++", "description": "Compiler used to build and run on this computer." },
         "vsproj.windowsCompiler": { "type": "string", "default": "", "description": "Cross compiler that makes the Windows .exe when packaging. Empty picks x86_64-w64-mingw32-g++ (x64) or i686-w64-mingw32-g++ (x86)." },
         "vsproj.extraFlags": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Extra compiler flags added to every build." },

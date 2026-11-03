@@ -60,3 +60,49 @@ test('a start-menu launch never opens a folder by itself', () => {
   const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'settings.json'), 'utf8'));
   assert.strictEqual(settings['window.restoreWindows'], 'none');
 });
+
+test('the default settings have no vertical ruler', () => {
+  const settings = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'settings.json'), 'utf8'));
+  assert.ok(!('editor.rulers' in settings));
+});
+
+test('the launcher removes the old ruler, adds new defaults and can add the menu entry', { skip: !have('bash') }, () => {
+  const root = path.join(__dirname, '..');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ih-'));
+  const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'xdg-'));
+  fs.mkdirSync(path.join(home, 'data', 'user-data', 'User'), { recursive: true });
+  const settings = path.join(home, 'data', 'user-data', 'User', 'settings.json');
+  fs.writeFileSync(settings, '{\n  "editor.rulers": [120],\n  "editor.tabSize": 4\n}\n');
+  const env = { ...process.env, IDE_HOME: home, XDG_DATA_HOME: xdg };
+  const src = fs.readFileSync(path.join(root, 'bin', 'ide'), 'utf8');
+  const fn = (name) => new RegExp('^' + name + '\\(\\) \\{[\\s\\S]*?^\\}', 'm').exec(src)[0];
+  const script = [fn('add_setting'), fn('migrate_settings'), fn('cmd_integrate'), 'say() { :; }', 'HOME_DIR="$IDE_HOME"', 'ROOT="' + root + '"', 'migrate_settings', 'cmd_integrate'].join('\n');
+  const r = cp.spawnSync('bash', ['-c', script], { env, encoding: 'utf8' });
+  assert.strictEqual(r.status, 0, r.stderr);
+  const after = fs.readFileSync(settings, 'utf8');
+  assert.ok(!after.includes('rulers'));
+  assert.match(after, /"window.restoreWindows": "none"/);
+  const desktop = fs.readFileSync(path.join(xdg, 'applications', 'ide-of-doom-and-destruction.desktop'), 'utf8');
+  assert.ok(desktop.includes('Exec=' + root + '/bin/ide-desktop'));
+  assert.ok(fs.existsSync(path.join(xdg, 'icons', 'hicolor', '512x512', 'apps', 'ide-of-doom-and-destruction.png')));
+});
+
+test('branding the editor copy changes only the private copy and is repeatable', () => {
+  const root = path.join(__dirname, '..');
+  const ed = fs.mkdtempSync(path.join(os.tmpdir(), 'ed-'));
+  const app = path.join(ed, 'resources', 'app');
+  fs.mkdirSync(path.join(app, 'resources', 'linux'), { recursive: true });
+  fs.writeFileSync(path.join(app, 'package.json'), '{"name":"code","desktopName":"code-url-handler.desktop"}');
+  fs.writeFileSync(path.join(app, 'product.json'), '{"nameShort":"Code","nameLong":"Visual Studio Code","applicationName":"code"}');
+  fs.writeFileSync(path.join(app, 'resources', 'linux', 'code.png'), 'old');
+  for (let i = 0; i < 2; i++) {
+    const r = cp.spawnSync('node', [path.join(root, 'scripts', 'brand-editor.js'), ed, path.join(root, 'packaging', 'ide-of-doom-and-destruction.png')], { encoding: 'utf8' });
+    assert.strictEqual(r.status, 0, r.stderr);
+  }
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(app, 'package.json'), 'utf8')).desktopName, 'ide-of-doom-and-destruction.desktop');
+  const product = JSON.parse(fs.readFileSync(path.join(app, 'product.json'), 'utf8'));
+  assert.strictEqual(product.nameLong, 'IDE of Doom and Destruction');
+  assert.strictEqual(product.applicationName, 'code', 'the command name stays as it was');
+  assert.strictEqual(fs.readFileSync(path.join(app, 'resources', 'linux', 'code.png.orig'), 'utf8'), 'old');
+  assert.strictEqual(fs.readFileSync(path.join(app, 'package.json.orig'), 'utf8').includes('code-url-handler'), true);
+});

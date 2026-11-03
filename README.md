@@ -11,7 +11,7 @@ It is not a new editor and it does not convert anything. It runs next to your no
 | Add > Class | `Shift+Alt+C`: creates `Name.h` and `Name.cpp` and lists them in the `.vcxproj` and `.filters` |
 | Add > New Item | `Ctrl+Shift+A` |
 | Build Solution | `F7` or `Ctrl+Shift+B` |
-| Start (F5 / Ctrl+F5) | the **play button** in the top bar of any `.cpp`/`.h` file, **Run** in the bottom bar, or `F5`: builds, then runs in the terminal |
+| Start (F5 / Ctrl+F5) | the **play button** in the top bar of any `.cpp`/`.h` file, **Run** in the bottom bar, or `F5`: builds, then runs the program in a **separate terminal window** (your default terminal: the one set in KDE's System Settings, `$TERMINAL`, Konsole, GNOME Console, kitty, alacritty, foot, xterm...). Setting `vsproj.terminal` picks another; `vsproj.runIn` can send it to the editor's own terminal panel instead |
 | Error List | the **Problems** panel (`Ctrl+Shift+M`), filled from compiler output |
 | Configuration / platform picker | the status bar item (`Debug \| x64`) |
 | `system("cls")`, `system("pause")` | work, via small stand-ins on the program's PATH |
@@ -32,9 +32,15 @@ Open **IDE of Doom and Destruction** from the application menu, or right-click a
 
 If the entry is missing from the menu or *Open With* right after installing, log out and in once (or run `kbuildsycoca6`); the package already asks the desktop to refresh.
 
+### Arch family and other distributions
+
+There is no package for them yet; use the download. Get `ide-of-doom-and-destruction.tar.gz` from the latest release, unpack it somewhere you keep (for example `~/Applications`), and start `bin/ide setup` once. It downloads the editor and adds **IDE of Doom and Destruction** to your application menu and *Open With* list (`ide integrate` does just that part). From then on everything is in the GUI, and the Updates window updates the copy in place.
+
+Packages you need, Arch family: `sudo pacman -S git curl zenity gcc mingw-w64-gcc wine` (`kdialog` can replace `zenity`).
+
 ### From a clone
 
-Needs `bash`, `curl`, `tar` and a C++ compiler (`g++`). For the Windows `.exe` in **Package for Submission**, also `g++-mingw-w64-x86-64-posix`.
+Needs `bash`, `curl`, `tar`, `git` and a C++ compiler (`g++`). For the Windows `.exe` in **Package for Submission**, also the mingw-w64 cross compiler, and `wine` to try that `.exe` out.
 
 ```bash
 git clone https://github.com/TurboNZL/ide-of-doom-and-destruction
@@ -50,6 +56,10 @@ Then open any folder that holds a solution:
 Add `bin/` to your `PATH` to type just `ide`.
 
 Debian/Ubuntu: `sudo apt install g++ g++-mingw-w64-x86-64-posix`.
+
+## Windows programs in Wine
+
+**IDE of Doom: Run the Windows Build in Wine** builds the Windows `.exe` with the cross compiler and runs it under Wine. **Run an .exe in the Wine Prefix...** (also in the file explorer's right-click menu on any `.exe`, and offered after **Package for Submission**) runs a finished `.exe`, for example the one you are about to hand in. They all use one Wine prefix kept in the tool's own data folder (`~/.local/share/ide-of-doom-and-destruction/wine-prefix`, or `wine-prefix/` next to a clone), so `~/.wine` is never used. Delete that folder to reset it.
 
 ## Where the custom features are
 
@@ -93,7 +103,7 @@ Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the exten
 - No debugger (breakpoints, stepping). Run and read the output.
 - Console `Application` projects only; no libraries, no project references, no property sheets, no precompiled headers, no resource files.
 - The compiler is GCC, not MSVC, so the odd thing MSVC accepts or rejects will differ. Before handing something in, build it once in Visual Studio, or let the CI in a private copy of your project do it with `msbuild` on a Windows runner.
-- Linux only (x64 and arm64). The package is for Debian-family systems; other distributions use the clone.
+- Linux only (x64 and arm64). Only Debian-family systems have a package; others use the download (see above).
 
 ## Developing
 

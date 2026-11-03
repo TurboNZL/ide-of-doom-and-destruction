@@ -14,19 +14,21 @@ trap 'rm -rf "$stage"' EXIT
 
 opt="$stage/opt/$pkg"
 mkdir -p "$opt" "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/icons/hicolor/scalable/apps" "$stage/DEBIAN"
-for item in bin config extension scripts package.json README.md LICENSE; do cp -r "$root/$item" "$opt/"; done
-rm -f "$opt"/scripts/build-deb.sh
+for item in bin config extension packaging scripts package.json README.md LICENSE; do cp -r "$root/$item" "$opt/"; done
+rm -f "$opt"/scripts/build-deb.sh "$opt"/packaging/postinst "$opt"/packaging/control
 # the packaged extension carries the package's version, so the editor can tell when it is out of date
 sed -i "0,/\"version\": *\"[^\"]*\"/s//\"version\": \"$version\"/" "$opt/extension/package.json"
 
 ln -s "/opt/$pkg/bin/ide" "$stage/usr/bin/ide"
 cp "$root/packaging/$pkg.desktop" "$stage/usr/share/applications/$pkg.desktop"
 cp "$root/packaging/$pkg.svg" "$stage/usr/share/icons/hicolor/scalable/apps/$pkg.svg"
+mkdir -p "$stage/usr/share/icons/hicolor/512x512/apps"
+cp "$root/packaging/$pkg.png" "$stage/usr/share/icons/hicolor/512x512/apps/$pkg.png"
 
 find "$stage" -type d -exec chmod 755 {} +
 find "$opt" -type f -exec chmod 644 {} +
 chmod 755 "$opt"/bin/* "$opt"/extension/shims/* "$opt"/scripts/*.js
-chmod 644 "$stage/usr/share/applications/$pkg.desktop" "$stage/usr/share/icons/hicolor/scalable/apps/$pkg.svg"
+chmod 644 "$stage/usr/share/applications/$pkg.desktop" "$stage/usr/share/icons/hicolor/scalable/apps/$pkg.svg" "$stage/usr/share/icons/hicolor/512x512/apps/$pkg.png"
 
 installed_kb="$(du -sk "$stage" | cut -f1)"
 sed -e "s/@VERSION@/$version/" -e "s/@SIZE@/$installed_kb/" "$root/packaging/control" > "$stage/DEBIAN/control"
