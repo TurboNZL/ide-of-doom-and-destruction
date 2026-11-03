@@ -19,7 +19,7 @@ A portable VS Code (downloaded by `bin/ide setup` into `./vscode`, portable via 
 | Public repo hygiene | The repo is public and names nobody but the owner (TurboNZL). No personal, institutional or project-specific text in the code, docs or tests (tests build their own sample project). Anything that varies per user, such as submission folder names, is a setting with a neutral default. |
 | Packaging | One architecture-independent `.deb` (`scripts/build-deb.sh`, `packaging/`): the tool in `/opt/ide-of-doom-and-destruction`, `/usr/bin/ide`, a menu entry. It never ships VS Code; the editor is downloaded per user into `~/.local/share/ide-of-doom-and-destruction/` (read-only `/opt` selects that path in `bin/ide`). After a package update `bin/ide` reinstalls the extension when `data/.extension-version` differs from the package's version. |
 | Updates | The engine's `updaters` rules, ported to `extension/lib/debInstall.js` + `updater.js` (find newest release incl. pre-releases, skip drafts; download; pkexec, then sudo terminal, `systemd-run --user` when `NoNewPrivs`; success only when `dpkg-query` shows the new version; always show the copyable command). The window is a webview panel (`extension/updateWindow.js`), not Electron, so there is no `latest-linux.yml`: the release's `.deb` asset is the manifest, and "release exists, `.deb` not attached yet" is the still-being-built state. |
-| GitHub | VS Code's built-in Git and GitHub authentication, configured in `config/settings.json`, plus the Pull Requests extension and a `vsproj.signInGitHub` command. New projects get `git init -b main`. No tokens are stored by this tool. |
+| GitHub | VS Code's built-in Git and GitHub authentication, configured in `config/settings.json`, plus the Pull Requests extension and a `vsproj.signInGitHub` command. New projects get `git init -b main`. No tokens are stored by this tool. Git scanning is kept narrow (no parent-folder search, depth 1, no autofetch), and a start-menu launch opens an empty window, never the home folder. |
 | Dependencies | None at runtime (the `.vsix` is packed by `scripts/pack-vsix.js`; no `vsce`). |
 
 ## Repo layout
@@ -50,3 +50,4 @@ The Updates window rendering, the real polkit prompt and terminal fallback, GitH
 ## Session log
 - First version: all of the above.
 - Added the `.deb`, the Updates window and the GitHub setup.
+- Fixed: the start-menu entry opened the home folder (git scan); git settings narrowed. Open: GitHub sign-in not opening the browser, cause not yet known.

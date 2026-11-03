@@ -66,6 +66,15 @@ install_extensions() {
     "$CODE_CLI" --install-extension "$ext" >&2 || say "Could not install $ext (you can add it later from the Extensions view)."
   done < "$ROOT/config/extensions.txt"
   tool_version > "$HOME_DIR/data/.extension-version"
+  migrate_settings
+}
+
+# Earlier versions wrote two git settings that made the editor scan parent folders and fetch in the background.
+migrate_settings() {
+  local f="$HOME_DIR/data/user-data/User/settings.json"
+  [ -f "$f" ] || return 0
+  sed -i -e 's/"git.openRepositoryInParentFolders": "always"/"git.openRepositoryInParentFolders": "never"/' \
+         -e 's/"git.autofetch": true/"git.autofetch": false/' "$f"
 }
 
 # The version of the tool this launcher belongs to (0.0.0 for a plain checkout).
@@ -131,6 +140,8 @@ case "${1:-}" in
       if [ -t 0 ]; then cmd_setup; else die "The editor is not installed yet. Run: ide setup"; fi
     fi
     sync_extension
-    if [ $# -eq 0 ]; then set -- .; fi
+    # From a terminal, open the current folder. From the start menu there is no terminal and the current folder is
+    # the home folder, which must not be opened (the editor would watch and scan everything in it): open an empty window.
+    if [ $# -eq 0 ] && [ -t 0 ]; then set -- .; fi
     exec "$CODE" "$@" ;;
 esac
