@@ -32,6 +32,11 @@ function shellQuote(arg) {
   return "'" + String(arg).replace(/'/g, "'\\''") + "'";
 }
 
+/** Quotes one argument for cmd.exe: double quotes always, so paths with spaces work; a quote inside is doubled. */
+function cmdQuote(arg) {
+  return '"' + String(arg).replace(/"/g, '""') + '"';
+}
+
 /**
  * Escapes an argument with backslashes instead of quotes. Unlike single quotes with the '\'' trick, this reads the
  * same in sh, bash, zsh and fish, so it is the form to use for text typed into a user's own terminal.
@@ -49,4 +54,4 @@ function toBackslash(p) {
   return p.replace(/\//g, '\\');
 }
 
-module.exports = { BOM, detectEol, withEol, splitBom, xmlEscape, xmlUnescape, shellQuote, escapeArg, toSlash, toBackslash };
+module.exports = { BOM, detectEol, withEol, splitBom, xmlEscape, xmlUnescape, shellQuote, cmdQuote, escapeArg, toSlash, toBackslash };

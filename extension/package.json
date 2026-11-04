@@ -61,6 +61,10 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        { "command": "vsproj.runWindowsBuild", "when": "!isWindows" },
+        { "command": "vsproj.runExeInPrefix", "when": "!isWindows" }
+      ],
       "editor/title": [
         { "command": "vsproj.run", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "navigation@1" },
         { "command": "vsproj.build", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "navigation@2" }
@@ -79,7 +83,7 @@
         { "command": "vsproj.removeItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove" }
       ],
       "explorer/context": [
-        { "command": "vsproj.runExeInPrefix", "when": "resourceExtname == .exe", "group": "7_modification" },
+        { "command": "vsproj.runExeInPrefix", "when": "resourceExtname == .exe && !isWindows", "group": "7_modification" },
         { "command": "vsproj.addToProject", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "7_modification" }
       ]
     },
@@ -98,9 +102,9 @@
         "vsproj.configuration": { "type": "string", "enum": ["Debug", "Release"], "default": "Debug", "description": "Build configuration used by Build and Run." },
         "vsproj.platform": { "type": "string", "enum": ["x64", "x86"], "default": "x64", "description": "Platform used by Build and Run." },
         "vsproj.runIn": { "type": "string", "enum": ["externalTerminal", "integratedTerminal"], "default": "externalTerminal", "description": "Where Run shows the program: a separate terminal window (your default terminal app), or the editor's own terminal panel." },
-        "vsproj.terminal": { "type": "string", "default": "", "description": "Terminal app for external runs, for example konsole or \"alacritty -e\". Empty uses $TERMINAL, then your desktop's terminal, then the first one found." },
-        "vsproj.compiler": { "type": "string", "default": "g++", "description": "Compiler used to build and run on this computer." },
-        "vsproj.windowsCompiler": { "type": "string", "default": "", "description": "Cross compiler that makes the Windows .exe when packaging. Empty picks x86_64-w64-mingw32-g++ (x64) or i686-w64-mingw32-g++ (x86)." },
+        "vsproj.terminal": { "type": "string", "default": "", "description": "Terminal app for external runs (not used on Windows, which opens a console window), for example konsole or \"alacritty -e\". Empty uses $TERMINAL, then your desktop's terminal, then the first one found." },
+        "vsproj.compiler": { "type": "string", "default": "g++", "description": "Compiler used to build and run on this computer. On Windows the g++ that setup downloaded is used when this is g++." },
+        "vsproj.windowsCompiler": { "type": "string", "default": "", "description": "Compiler that makes the Windows .exe when packaging. Empty picks (on Windows, the g++ that setup downloaded; elsewhere) x86_64-w64-mingw32-g++ (x64) or i686-w64-mingw32-g++ (x86)." },
         "vsproj.extraFlags": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Extra compiler flags added to every build." },
         "vsproj.solutionFormat": { "type": "string", "enum": ["slnx", "sln"], "default": "slnx", "description": "Solution file format for new projects." },
         "vsproj.submission.name": { "type": "string", "default": "", "description": "Name used in the submission folder names ({name})." },

@@ -1,4 +1,4 @@
-# Every merge to main publishes a release: the .deb (what the Updates window installs), the extension (.vsix), and the whole tool as a .tar.gz.
+# Every merge to main publishes a release: the .deb (what the Updates window installs), the extension (.vsix), the whole tool as a .tar.gz, and the Windows zip.
 # The files have no version in their names: each release is its own page, and /releases/latest/download/<name> then always works.
 # The version is the year, the month and a counter: v2026.11.0, v2026.11.1, ... (the counter restarts each month).
 # Documentation-only changes do not release. "Run workflow" in the Actions tab releases the current main on demand.
@@ -52,6 +52,7 @@ jobs:
           node scripts/pack-vsix.js out/ide-of-doom-and-destruction.vsix
           tar -czf out/ide-of-doom-and-destruction.tar.gz bin config extension packaging scripts package.json README.md LICENSE
           bash scripts/build-deb.sh "$version" out/ide-of-doom-and-destruction.deb
+          node scripts/build-windows-zip.js out/ide-of-doom-and-destruction-windows.zip
       - name: Attach them to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 # ide-of-doom-and-destruction
 
-A portable VS Code bundle that works with **Visual Studio C++ solutions** (`.slnx` / `.sln` / `.vcxproj`) on Linux, so a project you edit here opens, builds and runs unchanged in Visual Studio on Windows.
+A portable VS Code bundle that works with **Visual Studio C++ solutions** (`.slnx` / `.sln` / `.vcxproj`) on Linux and Windows, so a project you edit here opens, builds and runs unchanged in Visual Studio on Windows.
 
 It is not a new editor and it does not convert anything. It runs next to your normal VS Code (its own settings and extensions live in a folder inside this tool) and adds the Visual Studio workflow on top:
 
@@ -19,6 +19,16 @@ It is not a new editor and it does not convert anything. It runs next to your no
 The `.vcxproj` is the source of truth: the file list, language standard, warning level, defines and include folders are read from it each time you build. Nothing is generated beside it except IntelliSense data in `.vs/` (which Visual Studio already ignores).
 
 ## Install
+
+### Windows 10 and 11 (x64)
+
+Download `ide-of-doom-and-destruction-windows.zip` from the [latest release](https://github.com/TurboNZL/ide-of-doom-and-destruction/releases/latest), unpack it somewhere you keep (for example `C:\Tools`; not under `Program Files`, the editor is downloaded next to it), and double-click `bin\ide.cmd` or run:
+
+```
+bin\ide.cmd setup
+```
+
+Setup downloads the editor (portable, so your normal VS Code is untouched), a MinGW-w64 `g++` from the WinLibs project (about 300 MB, kept in `%LOCALAPPDATA%` or next to the tool; skipped when a `g++` is already on `PATH`), installs the extensions and adds **IDE of Doom and Destruction** to the Start menu. Needs only what Windows already has (`curl`, `tar`, PowerShell). Build and Run use `g++` and open the program in its own console window; the **Wine** commands are Linux-only and hidden. **Package for Submission** uses the same compiler, no cross compiler needed. The Updates window updates the copy in place (`bin\ide.cmd update`).
 
 ### .deb (Debian, Ubuntu and friends)
 
@@ -96,14 +106,14 @@ Command palette > **IDE of Doom: Updates...** opens the Updates window: installe
 
 The editor checks once a day and offers to open the window when a newer release exists (setting `vsproj.checkForUpdates`). A copy installed from a clone updates with `ide update` (`git pull` and a reinstall of the extension).
 
-Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`) and the whole tool (`.tar.gz`) attached.
+Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`), the whole tool (`.tar.gz`) and the Windows zip attached.
 
 ## What it does not do
 
 - No debugger (breakpoints, stepping). Run and read the output.
 - Console `Application` projects only; no libraries, no project references, no property sheets, no precompiled headers, no resource files.
 - The compiler is GCC, not MSVC, so the odd thing MSVC accepts or rejects will differ. Before handing something in, build it once in Visual Studio, or let the CI in a private copy of your project do it with `msbuild` on a Windows runner.
-- Linux only (x64 and arm64). Only Debian-family systems have a package; others use the download (see above).
+- Linux (x64 and arm64) and Windows (x64). Only Debian-family systems have a package; others use the download (see above). On Windows the window keeps the stock editor icon and the x86 platform builds 64-bit (MinGW x64 only).
 
 ## Developing
 

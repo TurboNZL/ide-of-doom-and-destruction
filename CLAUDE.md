@@ -26,6 +26,7 @@ A portable VS Code (downloaded by `bin/ide setup` into `./vscode`, portable via 
 | Running programs | In a separate terminal window, found by `extension/lib/terminal.js` (setting, `$TERMINAL`, KDE's configured terminal, then a list), because the target distros vary (Debian family and Arch family). `vsproj.runIn` can switch to the editor's terminal. Windows `.exe`s run under Wine in `<data dir>/wine-prefix` (`IDE_DATA_DIR`, exported by the launcher), never `~/.wine`. |
 | Branding the editor | `scripts/brand-editor.js` edits only the private downloaded copy (`desktopName`, `nameShort/nameLong`, window icon; originals kept as `*.orig`), once per download (`data/.branded`). Do not do this to a user's normal VS Code. |
 | Other distros | No package yet: the release tarball + `ide setup` (which also runs `ide integrate` for the menu entry). The Updates window updates such copies in place by running `IDE_BIN update`. |
+| Windows | Zip (`ide-of-doom-and-destruction-windows.zip`, `scripts/build-windows-zip.js`): `bin/ide.cmd` -> `bin/ide.ps1` (plain ASCII, PowerShell 5 compatible; uses the built-in `curl.exe`/`tar.exe`). Downloads portable VS Code win32-x64 and WinLibs MinGW-w64 (`g++`) into the data folder (`IDE_DATA_DIR`, `mingw64/`). Build tasks run in `cmd.exe` (`planBuild` with `shell: 'cmd'`), runs open a console window via a `run.cmd` (`extension/lib/windows.js`); Wine commands hidden (`!isWindows`). `config/settings.windows.json` is `settings.json` plus clangd `--query-driver`. No editor branding on Windows (stock icon). Updates run `ide.cmd update` (the running `ide.cmd` is never overwritten). |
 | Dependencies | None at runtime (the `.vsix` is packed by `scripts/pack-vsix.js`; no `vsce`). |
 
 ## Repo layout
@@ -48,6 +49,9 @@ The VS Code UI itself: tree view rendering, the task/problem-matcher wiring, key
 ## Also untested on a real desktop
 The Updates window rendering, the real polkit prompt and terminal fallback, GitHub sign-in through the browser and keyring, and Publish to GitHub. The `.deb` itself was built, installed, queried with `dpkg-query` and removed in a test container; the install helpers are tested with the system calls replaced.
 
+## Windows port: NOT run on Windows
+Written on Linux with no Windows machine: the unit tests (`test/windows.test.js`) and the zip layout pass here, but `ide.ps1`, the WinLibs download (asset name regex), the portable VS Code zip, the Start menu shortcut, `cmd.exe` task quoting, the console window and the Updates window on Windows have never been executed. CI (`check.yml` job `windows-tool`) parses the launcher and builds+runs a sample with the real command line; first thing to do on a real Windows PC: `bin\ide.cmd setup`, open a project, F5, break the code, check Problems.
+
 ## Also untested (second round)
 The external terminal windows on a real desktop, Wine prefix creation on first run, whether editing `desktopName` is what fixes the KDE window identity on Wayland and X11, and `ide integrate` on Arch.
 
@@ -59,6 +63,7 @@ The external terminal windows on a real desktop, Wine prefix creation on first r
 - The user's login shell may be fish (or anything non-POSIX). fish rejects `( ... )` and `{ ...; }` and its quoting differs from the `'\''` idiom, so build tasks pin `/bin/sh -c`, and anything typed into the user's own terminal is a short backslash-escaped `sh <file>` (`escapeArg`, `sendScript`); never type POSIX shell text into it directly.
 
 ## Session log
+- Windows port (zip, PowerShell launcher, cmd-based build/run, WinLibs compiler). Untested on real Windows.
 - First version: all of the above.
 - Added the `.deb`, the Updates window and the GitHub setup.
 - Fixed: the start-menu entry opened the home folder (git scan); git settings narrowed. GitHub sign-in turned out to work.

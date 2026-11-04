@@ -3,7 +3,7 @@
 // which is plenty for the small console programs this is made for.
 
 const path = require('path');
-const { shellQuote } = require('./text');
+const { shellQuote, cmdQuote, toBackslash } = require('./text');
 
 const WARNING_FLAGS = {
   TurnOffAllWarnings: ['-w'],
@@ -15,6 +15,11 @@ const WARNING_FLAGS = {
 };
 
 const CROSS_COMPILERS = { x64: 'x86_64-w64-mingw32-g++', x86: 'i686-w64-mingw32-g++' };
+
+/** On a Windows computer the MinGW compiler is the native one: it makes the .exe directly, so there is no cross compiler. */
+function defaultCompiler(platform, hostWindows) {
+  return hostWindows ? 'g++' : CROSS_COMPILERS[platform];
+}
 
 /** Where Visual Studio puts the output: <solution>/x64/Debug, or <solution>/Debug for 32-bit. */
 function outputDir(solutionDir, config, platform) {
@@ -33,7 +38,9 @@ function expandMacros(value, ctx) {
 
 /**
  * Works out how to build one project.
- * opts: { solutionDir, config, platform, target: 'native' | 'windows', compiler, extraFlags, cwd, outFile }
+ * opts: { solutionDir, config, platform, target: 'native' | 'windows', compiler, extraFlags, cwd, outFile, shell: 'sh' | 'cmd' }
+ * `shell` is the command interpreter that will run commandLine: 'cmd' on a Windows computer, 'sh' elsewhere.
+ * On a Windows computer 'native' already means a Windows program (.exe, windows.h available), same as 'windows'.
  * Returns { compiler, args, cwd, outDir, outFile, commandLine, sources }.
  */
 function planBuild(project, opts) {
@@ -43,8 +50,9 @@ function planBuild(project, opts) {
   const solutionDir = opts.solutionDir;
   const s = project.settings;
   const ctx = { projectDir: project.dir, solutionDir, config, platform };
-  const windows = target === 'windows';
-  const compiler = opts.compiler || (windows ? CROSS_COMPILERS[platform] : 'g++');
+  const cmd = opts.shell === 'cmd';
+  const windows = target === 'windows' || cmd;
+  const compiler = opts.compiler || (windows ? defaultCompiler(platform, cmd) : 'g++');
   const outDir = outputDir(solutionDir, config, platform);
   const outFile = opts.outFile || path.join(outDir, project.targetName + (windows ? '.exe' : ''));
 
@@ -71,8 +79,9 @@ function planBuild(project, opts) {
   const cwd = opts.cwd || solutionDir; // relative paths in the output are relative to this
   const rel = (p) => path.relative(cwd, p) || '.';
   const shown = args.map((a, i) => (sources.includes(a) ? rel(a) : a));
-  const commandLine =
-    'mkdir -p ' + shellQuote(rel(path.dirname(outFile))) + ' && ' + shellQuote(compiler) + ' ' + shown.map((a) => shellQuote(a)).join(' ');
+  const commandLine = cmd
+    ? 'if not exist ' + cmdQuote(toBackslash(rel(path.dirname(outFile)))) + ' mkdir ' + cmdQuote(toBackslash(rel(path.dirname(outFile)))) + ' && ' + cmdQuote(compiler) + ' ' + shown.map((a) => cmdQuote(a)).join(' ')
+    : 'mkdir -p ' + shellQuote(rel(path.dirname(outFile))) + ' && ' + shellQuote(compiler) + ' ' + shown.map((a) => shellQuote(a)).join(' ');
   return { compiler, args, cwd, outDir, outFile, sources, commandLine, shownArgs: shown };
 }
 
@@ -89,4 +98,4 @@ function compileCommands(project, opts) {
   return entries;
 }
 
-module.exports = { planBuild, compileCommands, outputDir, CROSS_COMPILERS, WARNING_FLAGS };
+module.exports = { planBuild, compileCommands, outputDir, defaultCompiler, CROSS_COMPILERS, WARNING_FLAGS };
