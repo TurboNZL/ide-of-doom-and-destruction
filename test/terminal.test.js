@@ -84,6 +84,7 @@ test('text typed into a terminal reads the same in sh, bash and fish', () => {
 
 test('the build task is pinned to /bin/sh so fish and other shells cannot break it', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'extension', 'extension.js'), 'utf8');
-  assert.match(src, /ShellExecution\(commandLine, \{ cwd, executable: '\/bin\/sh', shellArgs: \['-c'\] \}\)/);
+  assert.match(src, /executable: '\/bin\/sh', shellArgs: \['-c'\]/);
+  assert.match(src, /executable: 'cmd\.exe', shellArgs: \['\/d', '\/c'\]/); // Windows: cmd, never the user's PowerShell
   assert.ok(!/sendText\(plain/.test(src), 'no raw POSIX text is typed into the user\'s shell');
 });

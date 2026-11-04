@@ -39,7 +39,7 @@ function resetDir(root, dir) {
 
 /**
  * opts: { solution (from workspace.loadSolution), project (the one to build), outRoot, name,
- *         sourceTemplate, releaseTemplate, solutionName, platform, compiler, run }
+ *         sourceTemplate, releaseTemplate, solutionName, platform, compiler, shell, env, run }
  * `run(compiler, args, cwd)` runs a command and returns { status, output }; defaults to spawnSync.
  * Returns { sourceDir, releaseDir, exe, files }.
  */
@@ -56,10 +56,10 @@ function packageSubmission(opts) {
   const exeName = project.targetName + '.exe';
   const exe = path.join(releaseDir, exeName);
   const plan = planBuild(project, {
-    solutionDir: solution.dir, config: 'Release', platform, target: 'windows', compiler: opts.compiler, outFile: path.join(outRoot, '.build', exeName)
+    solutionDir: solution.dir, config: 'Release', platform, target: 'windows', compiler: opts.compiler, shell: opts.shell, outFile: path.join(outRoot, '.build', exeName)
   });
   fs.mkdirSync(path.dirname(plan.outFile), { recursive: true });
-  const result = (opts.run || defaultRun)(plan.compiler, plan.args, plan.cwd);
+  const result = (opts.run || defaultRun)(plan.compiler, plan.args, plan.cwd, opts.env);
   if (result.status !== 0) {
     const e = new Error('The release build failed:\n' + result.output);
     e.output = result.output;
@@ -102,11 +102,11 @@ function packageSubmission(opts) {
   return { sourceDir, releaseDir, exe, files };
 }
 
-function defaultRun(compiler, args, cwd) {
-  const r = cp.spawnSync(compiler, args, { cwd, encoding: 'utf8' });
+function defaultRun(compiler, args, cwd, env) {
+  const r = cp.spawnSync(compiler, args, { cwd, encoding: 'utf8', env: env || process.env });
   if (r.error) {
     const missing = r.error.code === 'ENOENT';
-    return { status: 127, output: missing ? compiler + ' was not found. On Debian/Ubuntu: sudo apt install g++-mingw-w64-x86-64-posix' : String(r.error) };
+    return { status: 127, output: missing ? compiler + (process.platform === 'win32' ? ' was not found. Run "ide setup" again to download the compiler.' : ' was not found. On Debian/Ubuntu: sudo apt install g++-mingw-w64-x86-64-posix') : String(r.error) };
   }
   return { status: r.status, output: (r.stdout || '') + (r.stderr || '') };
 }

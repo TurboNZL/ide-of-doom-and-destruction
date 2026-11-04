@@ -1,0 +1,23 @@
+{
+  "workbench.startupEditor": "none",
+  "window.restoreWindows": "none",
+  "window.title": "${dirty}${activeEditorShort}${separator}${rootName}${separator}IDE of Doom and Destruction",
+  "workbench.colorTheme": "Default Dark Modern",
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "files.eol": "\r\n",
+  "files.autoSave": "off",
+  "git.enabled": true,
+  "git.autofetch": false,
+  "git.confirmSync": false,
+  "git.openRepositoryInParentFolders": "never",
+  "git.autoRepositoryDetection": "subFolders",
+  "git.repositoryScanMaxDepth": 1,
+  "git.defaultBranchName": "main",
+  "github.gitAuthentication": true,
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "manual",
+  "extensions.autoUpdate": false,
+  "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/.vs", "--fallback-style=Microsoft", "--header-insertion=never", "--background-index", "--query-driver=**/g++.exe,**/clang++.exe,**/g++,**/clang++"]
+}

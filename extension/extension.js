@@ -4,15 +4,18 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { shellQuote, escapeArg } = require('./lib/text');
+const { shellQuote, cmdQuote, escapeArg } = require('./lib/text');
 const ws = require('./lib/workspace');
-const { planBuild, CROSS_COMPILERS } = require('./lib/build');
+const { planBuild, defaultCompiler } = require('./lib/build');
+const win = require('./lib/windows');
 const { packageSubmission } = require('./lib/submission');
 const up = require('./lib/updater');
 const term = require('./lib/terminal');
 const wine = require('./lib/wine');
 const { UpdateWindow } = require('./updateWindow');
 const startPage = require('./startPage');
+
+const WIN = process.platform === 'win32';
 
 let context;
 let solution = null; // loaded solution, or null
@@ -65,14 +68,18 @@ function startupProject() {
 
 function buildOpts(target) {
   const extra = cfg().get('extraFlags') || [];
-  const winCompiler = cfg().get('windowsCompiler') || CROSS_COMPILERS[platform()];
+  // On Windows, 'g++' means the compiler that `ide setup` downloaded, when there is one.
+  const downloaded = WIN && win.mingwBin() ? path.join(win.mingwBin(), 'g++.exe') : '';
+  const winCompiler = cfg().get('windowsCompiler') || downloaded || defaultCompiler(platform(), WIN);
+  const nativeSetting = cfg().get('compiler') || 'g++';
   return {
+    shell: WIN ? 'cmd' : 'sh',
     solutionDir: solution ? solution.dir : rootDir(),
     cwd: rootDir() || undefined,
     config: configuration(),
     platform: platform(),
     target,
-    compiler: target === 'windows' ? winCompiler : cfg().get('compiler') || 'g++',
+    compiler: target === 'windows' ? winCompiler : WIN && nativeSetting === 'g++' ? winCompiler : nativeSetting,
     extraFlags: extra
   };
 }
@@ -112,8 +119,8 @@ function runTask(label, commandLine, cwd) {
     vscode.TaskScope.Workspace,
     label,
     'vsproj',
-    // Always /bin/sh: the commands are POSIX shell, and the user's own shell (fish, nushell...) may not understand them.
-    new vscode.ShellExecution(commandLine, { cwd, executable: '/bin/sh', shellArgs: ['-c'] }),
+    // Always /bin/sh (cmd.exe on Windows): the commands are written for exactly that, and the user's own shell (fish, PowerShell...) may not understand them.
+    new vscode.ShellExecution(commandLine, WIN ? { cwd, executable: 'cmd.exe', shellArgs: ['/d', '/c'] } : { cwd, executable: '/bin/sh', shellArgs: ['-c'] }),
     ['$vsproj-gcc']
   );
   task.group = vscode.TaskGroup.Build;
@@ -129,15 +136,25 @@ function runTask(label, commandLine, cwd) {
   });
 }
 
+/** echo text for cmd.exe: the characters it treats as syntax are escaped with ^. */
+function cmdEcho(text) {
+  return 'echo ' + String(text).replace(/[&|<>()^]/g, '^$&');
+}
+
 function warnUntracked(project) {
   const files = ws.untrackedFiles(project);
   if (!files.length) return '';
+  if (WIN) return cmdEcho('Note: not part of the project and not built: ' + files.join(', ') + ' (right-click > Add to Project)') + ' & ';
   return 'echo ' + shellQuote('Note: not part of the project and not built: ' + files.join(', ') + ' (right-click > Add to Project)') + ' ; ';
 }
 
 async function buildProject(project, opts) {
   const plan = planBuild(project, opts);
-  const cmd = warnUntracked(project) +
+  const cmd = WIN ? win.pathLine() + (win.pathLine() ? ' & ' : '') + warnUntracked(project) +
+    cmdEcho('------ Build started: ' + project.name + ' (' + opts.config + ' ' + opts.platform + ') ------') + ' & ' +
+    '( ' + plan.commandLine + ' ) && ' + cmdEcho('========== Build: 1 succeeded ==========') +
+    ' || ( ' + cmdEcho('========== Build: 1 failed ==========') + ' & exit /b 1 )' :
+    warnUntracked(project) +
     'echo ' + shellQuote('------ Build started: ' + project.name + ' (' + opts.config + ' ' + opts.platform + ') ------') + ' ; ' +
     '( ' + plan.commandLine + ' ) && echo ' + shellQuote('========== Build: 1 succeeded ==========') +
     ' || { echo ' + shellQuote('========== Build: 1 failed ==========') + ' ; exit 1 ; }';
@@ -189,7 +206,21 @@ function shimsDir() {
   return shims;
 }
 
+/** Windows: the program runs in its own console window (a batch file that waits for a key at the end). */
+async function runOnWindows(name, exe, cwd) {
+  if (cfg().get('runIn') !== 'integratedTerminal') {
+    const started = await win.runInConsole(win.programBatch({ name, cwd, exe }), context.globalStorageUri.fsPath);
+    if (started) return;
+    vscode.window.showWarningMessage('Could not open a console window, so the program runs in the editor\'s terminal.');
+  }
+  if (runTerminal) runTerminal.dispose();
+  runTerminal = vscode.window.createTerminal({ name, cwd, shellPath: 'cmd.exe' });
+  runTerminal.show(false);
+  runTerminal.sendText('cls & ' + cmdQuote(exe));
+}
+
 async function runNative(project, plan) {
+  if (WIN) { await runOnWindows(project.name, plan.outFile, project.dir); return; }
   const shims = shimsDir();
   const script = term.programScript({ name: project.name, cwd: project.dir, command: shellQuote(plan.outFile), pathPrefix: shims });
   const plain = 'clear; PATH=' + shellQuote(shims) + ':"$PATH"; export PATH; ' + shellQuote(plan.outFile) + '; code=$?; echo; echo "[' + project.name + ' exited with code $code]"';
@@ -209,6 +240,7 @@ async function cmdRun() {
 
 /** Runs an .exe with Wine in the prefix saved in this tool's data folder. */
 async function runInWine(name, exe, cwd) {
+  if (WIN) { await runOnWindows(name, exe, cwd); return; }
   const w = wine.findWine();
   if (!w) { vscode.window.showErrorMessage(wine.INSTALL_HINT); return; }
   const script = term.programScript({ name, cwd, command: wine.wineCommand(w, exe), extra: wine.wineSetup() });
@@ -456,12 +488,12 @@ async function cmdPackage() {
       const r = packageSubmission({
         solution, project, outRoot: path.join(solution.dir, 'Submission'), name,
         sourceTemplate: cfg().get('submission.sourceFolder'), releaseTemplate: cfg().get('submission.releaseFolder'),
-        solutionName: cfg().get('submission.solutionName'), platform: opts.platform, compiler: opts.compiler
+        solutionName: cfg().get('submission.solutionName'), platform: opts.platform, compiler: opts.compiler, shell: opts.shell, env: WIN ? win.buildEnv() : undefined
       });
       log('Packaged:\n  ' + r.sourceDir + '\n  ' + r.releaseDir);
-      const open = await vscode.window.showInformationMessage('Packaged to ' + path.join(solution.dir, 'Submission') + '. Edit Readme.txt in the release folder before handing it in.', 'Open Readme.txt', 'Show Folder', 'Test the .exe in Wine');
+      const open = await vscode.window.showInformationMessage('Packaged to ' + path.join(solution.dir, 'Submission') + '. Edit Readme.txt in the release folder before handing it in.', 'Open Readme.txt', 'Show Folder', WIN ? 'Test the .exe' : 'Test the .exe in Wine');
       if (open === 'Open Readme.txt') await vscode.window.showTextDocument(vscode.Uri.file(path.join(r.releaseDir, 'Readme.txt')));
-      if (open === 'Test the .exe in Wine') await runInWine(path.basename(r.exe), r.exe, r.releaseDir);
+      if (open === 'Test the .exe in Wine' || open === 'Test the .exe') await runInWine(path.basename(r.exe), r.exe, r.releaseDir);
       if (open === 'Show Folder') await vscode.env.openExternal(vscode.Uri.file(path.dirname(r.releaseDir)));
     } catch (e) { fail(e); }
   });

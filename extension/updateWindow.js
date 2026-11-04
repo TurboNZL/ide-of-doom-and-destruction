@@ -115,7 +115,10 @@ class UpdateWindow {
     const bin = process.env.IDE_BIN || 'ide';
     this.set({ phase: 'installing', message: 'Updating...', canUpdate: false, log: '', command: '' });
     await new Promise((resolve) => {
-      const child = cp.spawn(bin, ['update'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      const w = require('./lib/windows');
+      const child = process.platform === 'win32'
+        ? (() => { const c = w.updateCommand(); return cp.spawn(c.bin, c.args, { stdio: ['ignore', 'pipe', 'pipe'], ...c.options }); })()
+        : cp.spawn(bin, ['update'], { stdio: ['ignore', 'pipe', 'pipe'] });
       let log = '';
       const add = (d) => { log = (log + String(d)).slice(-4000); this.set({ log }); };
       child.stdout.on('data', add);
@@ -150,7 +153,9 @@ class UpdateWindow {
     const folder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0] ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
     const launcher = fs.existsSync('/usr/bin/ide') ? '/usr/bin/ide' : 'ide';
     const script = 'sleep 3; exec "$0" "$@"';
-    const child = cp.spawn('sh', ['-c', script, launcher, ...(folder ? [folder] : [])], { detached: true, stdio: 'ignore' });
+    const child = process.platform === 'win32'
+      ? cp.spawn('cmd.exe', ['/d', '/c', 'ping -n 4 127.0.0.1 >nul & "' + (process.env.IDE_BIN || 'ide') + '"' + (folder ? ' "' + folder + '"' : '')], { detached: true, stdio: 'ignore', windowsVerbatimArguments: true })
+      : cp.spawn('sh', ['-c', script, launcher, ...(folder ? [folder] : [])], { detached: true, stdio: 'ignore' });
     child.unref();
     vscode.commands.executeCommand('workbench.action.quit');
   }

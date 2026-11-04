@@ -39,3 +39,23 @@ jobs:
           $exe = Get-ChildItem -Recurse sample -Filter Sample.exe | Select-Object -First 1
           $out = & $exe.FullName
           if ($out -ne 'board 10') { throw "unexpected output: $out" }
+
+  windows-tool:
+    # The Windows port: the unit tests for it, PowerShell parses the launcher, and a sample solution is built with the
+    # command line the extension uses (cmd.exe syntax, the runner's own MinGW g++).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node --test test/windows.test.js
+      - name: The launcher parses
+        shell: pwsh
+        run: |
+          foreach ($f in 'bin/ide.ps1') {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors) | Out-Null
+            if ($errors) { $errors | ForEach-Object { Write-Host $_ }; exit 1 }
+          }
+      - name: Build a sample the way the extension does
+        run: node scripts/check-windows-build.js sample
