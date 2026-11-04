@@ -94,6 +94,7 @@ function Install-Editor {
     if (Test-Path (Join-Path $HomeDir 'data')) { Move-Item (Join-Path $HomeDir 'data') (Join-Path $new 'data') }
     if (Test-Path $HomeDir) { Remove-Item -Recurse -Force $HomeDir }
     Move-Item $new $HomeDir
+    Remove-Item -Force (Join-Path $HomeDir 'data\.branded') -ErrorAction SilentlyContinue
     # This folder is what makes it portable.
     New-Item -ItemType Directory -Force -Path (Join-Path $HomeDir 'data\user-data\User'), (Join-Path $HomeDir 'data\extensions') | Out-Null
   } finally { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
@@ -126,6 +127,26 @@ function Install-Compiler {
     if (Test-Path $MingwDir) { Remove-Item -Recurse -Force $MingwDir }
     Move-Item (Join-Path $tmp 'mingw64') $MingwDir
   } finally { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
+}
+
+# Gives the private editor copy this tool's icon (taskbar, window, Alt+Tab) by replacing the icon inside its Code.exe with
+# rcedit. Only this downloaded copy is changed, once per download; a normal VS Code is never touched. Best effort.
+function Set-Branding {
+  $marker = Join-Path $HomeDir 'data\.branded'
+  if (Test-Path $marker) { return }
+  $ico = Join-Path $Root 'packaging\ide-of-doom-and-destruction.ico'
+  if (-not (Test-Path $ico)) { return }
+  try {
+    $rcedit = Join-Path $DataDir 'rcedit-x64.exe'
+    if (-not (Test-Path $rcedit)) {
+      $url = $env:IDE_RCEDIT_URL
+      if (-not $url) { $url = 'https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe' }
+      Get-File $url $rcedit
+    }
+    & $rcedit $Code --set-icon $ico --set-version-string FileDescription 'IDE of Doom and Destruction' --set-version-string ProductName 'IDE of Doom and Destruction'
+    if ($LASTEXITCODE -ne 0) { throw "rcedit exit code $LASTEXITCODE" }
+    Set-Content -NoNewline -Path $marker -Value 'ok'
+  } catch { Say "Could not apply the app icon (the editor still works): $_" }
 }
 
 function Install-Extensions {
@@ -168,8 +189,9 @@ function Invoke-Integrate {
   $link = Join-Path $programs 'IDE of Doom and Destruction.lnk'
   $shell = New-Object -ComObject WScript.Shell
   $s = $shell.CreateShortcut($link)
-  $s.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-  $s.Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + (Join-Path $Root 'bin\ide.ps1') + '"'
+  # wscript runs ide.vbs, which starts the launcher with no console window, so nothing is left tied to the editor.
+  $s.TargetPath = Join-Path $env:SystemRoot 'System32\wscript.exe'
+  $s.Arguments = '"' + (Join-Path $Root 'bin\ide.vbs') + '"'
   $s.WorkingDirectory = $env:USERPROFILE
   $s.Description = 'Edit and build Visual Studio C++ solutions'
   $ico = Join-Path $Root 'packaging\ide-of-doom-and-destruction.ico'
@@ -181,6 +203,7 @@ function Invoke-Integrate {
 function Invoke-Setup {
   if (-not (Test-Path $Code)) { Install-Editor }
   Set-Settings
+  Set-Branding
   Install-Extensions
   Install-Compiler
   Invoke-Integrate
@@ -192,25 +215,20 @@ function Invoke-Update {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Die 'git is required to update a clone.' }
     & git -C $Root pull --ff-only
     if ($LASTEXITCODE -ne 0) { Die 'git pull failed.' }
+    if (-not (Test-Path $Code)) { Die 'The editor is not installed yet. Run: ide setup' }
+    Install-Extensions
   } else {
-    if (-not (Test-Writable $Root)) { Die "This folder is read-only; download the newest zip from https://github.com/$Repo/releases/latest and unpack it again." }
+    # An installed copy updates by running the newest installer over itself (silently; it also refreshes the extension).
     $tmp = Join-Path ([IO.Path]::GetTempPath()) ('ide-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     try {
-      Get-File "https://github.com/$Repo/releases/latest/download/$AppName-windows.zip" (Join-Path $tmp 'tool.zip')
-      Expand-Zip (Join-Path $tmp 'tool.zip') (Join-Path $tmp 'x')
-      # The running ide.cmd is left alone (cmd reads a batch file while it runs; it only ever calls ide.ps1).
-      Get-ChildItem -Recurse -File (Join-Path $tmp 'x') | ForEach-Object {
-        $rel = $_.FullName.Substring((Join-Path $tmp 'x').Length).TrimStart('\')
-        if ($rel -ieq 'bin\ide.cmd') { return }
-        $to = Join-Path $Root $rel
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $to) | Out-Null
-        Copy-Item -Force $_.FullName $to
-      }
+      $setup = Join-Path $tmp "$AppName-setup.exe"
+      Get-File "https://github.com/$Repo/releases/latest/download/$AppName-setup.exe" $setup
+      # /D must be the last argument and is not quoted.
+      $p = Start-Process -Wait -PassThru -FilePath $setup -ArgumentList @('/S', "/D=$Root")
+      if ($p.ExitCode -ne 0) { Die "the installer failed (exit code $($p.ExitCode))" }
     } finally { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
   }
-  if (-not (Test-Path $Code)) { Die 'The editor is not installed yet. Run: ide setup' }
-  Install-Extensions
   Say 'Updated. Restart the editor to use the new version.'
 }
 
@@ -227,6 +245,7 @@ switch ($(if ($Rest -and $Rest.Count -gt 0) { $Rest[0] } else { '' })) {
       $p = Start-Process -Wait -PassThru -FilePath 'powershell.exe' -ArgumentList @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "& '$self' setup; if (`$LASTEXITCODE -ne 0) { Read-Host 'Setup failed. Press Enter to close' } else { Start-Sleep -Seconds 2 }")
       if (-not (Test-Path $Code)) { exit 1 }
     }
+    Set-Branding
     Sync-Extension
     $targets = @($Rest | Where-Object { $_ })
     # Like the Linux launcher: with no folder given, open the current folder, but never the home folder (the editor would watch everything in it).
