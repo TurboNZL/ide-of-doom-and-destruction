@@ -34,6 +34,7 @@ BrandingText "${NAME} ${VERSION}"
 Section "Install"
   ; A running editor from an earlier install would keep its files locked.
   SetOutPath "$INSTDIR"
+  SetOverwrite try   ; an update runs this while ide.cmd is open: skip a locked file instead of failing
   File /r "${STAGE}\*.*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
   WriteRegStr HKCU "Software\${APPDIR}" "InstallDir" "$INSTDIR"
@@ -48,7 +49,7 @@ Section "Install"
 
   ; Same shortcut `ide integrate` makes (same name, so it is replaced, not doubled).
   SetOutPath "$PROFILE"
-  CreateShortCut "$SMPROGRAMS\${NAME}.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\bin\ide.ps1"' "$INSTDIR\packaging\ide-of-doom-and-destruction.ico" 0
+  CreateShortCut "$SMPROGRAMS\${NAME}.lnk" "$SYSDIR\wscript.exe" '"$INSTDIR\bin\ide.vbs"' "$INSTDIR\packaging\ide-of-doom-and-destruction.ico" 0
 
   ; Download the editor and the compiler, in a visible window, and wait for it.
   SetOutPath "$INSTDIR"

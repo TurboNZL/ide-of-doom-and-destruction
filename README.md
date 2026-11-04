@@ -24,13 +24,7 @@ The `.vcxproj` is the source of truth: the file list, language standard, warning
 
 Download `ide-of-doom-and-destruction-setup.exe` from the [latest release](https://github.com/TurboNZL/ide-of-doom-and-destruction/releases/latest) and run it. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\ide-of-doom-and-destruction`, adds the Start menu entry, then opens a window that downloads the editor and compiler (below). Windows may show a SmartScreen warning because the installer is not code-signed: *More info* > *Run anyway*. Uninstall from *Settings > Apps*; that removes the editor and its settings and extensions too.
 
-Prefer no installer? Download `ide-of-doom-and-destruction-windows.zip` instead, unpack it somewhere you keep (for example `C:\Tools`; not under `Program Files`, the editor is downloaded next to it), and double-click `bin\ide.cmd` or run:
-
-```
-bin\ide.cmd setup
-```
-
-Setup downloads the editor (portable, so your normal VS Code is untouched), a MinGW-w64 `g++` from the WinLibs project (about 300 MB, kept in `%LOCALAPPDATA%` or next to the tool; skipped when a `g++` is already on `PATH`), installs the extensions and adds **IDE of Doom and Destruction** to the Start menu. Needs only what Windows already has (`curl`, `tar`, PowerShell). Build and Run use `g++` and open the program in its own console window; the **Wine** commands are Linux-only and hidden. **Package for Submission** uses the same compiler, no cross compiler needed. The Updates window updates the copy in place (`bin\ide.cmd update`).
+The installer runs `bin\ide.cmd setup` for you; run it yourself to repeat or repair the download. Setup downloads the editor (portable, so your normal VS Code is untouched), a MinGW-w64 `g++` from the WinLibs project (about 300 MB, kept in `%LOCALAPPDATA%` or next to the tool; skipped when a `g++` is already on `PATH`), gives the editor this tool's icon, installs the extensions and adds **IDE of Doom and Destruction** to the Start menu. Needs only what Windows already has (`curl`, `tar`, PowerShell). Build and Run use `g++` and open the program in its own console window; the **Wine** commands are Linux-only and hidden. **Package for Submission** uses the same compiler, no cross compiler needed. The Updates window updates the copy by running the newest installer over it (`bin\ide.cmd update`).
 
 ### .deb (Debian, Ubuntu and friends)
 
@@ -108,14 +102,14 @@ Command palette > **IDE of Doom: Updates...** opens the Updates window: installe
 
 The editor checks once a day and offers to open the window when a newer release exists (setting `vsproj.checkForUpdates`). A copy installed from a clone updates with `ide update` (`git pull` and a reinstall of the extension).
 
-Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`), the whole tool (`.tar.gz`) and the Windows installer and zip attached.
+Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`), the whole tool (`.tar.gz`) and the Windows installer attached.
 
 ## What it does not do
 
 - No debugger (breakpoints, stepping). Run and read the output.
 - Console `Application` projects only; no libraries, no project references, no property sheets, no precompiled headers, no resource files.
 - The compiler is GCC, not MSVC, so the odd thing MSVC accepts or rejects will differ. Before handing something in, build it once in Visual Studio, or let the CI in a private copy of your project do it with `msbuild` on a Windows runner.
-- Linux (x64 and arm64) and Windows (x64). Only Debian-family systems have a package; others use the download (see above). On Windows the window keeps the stock editor icon and the x86 platform builds 64-bit (MinGW x64 only).
+- Linux (x64 and arm64) and Windows (x64). Only Debian-family systems have a package; others use the download (see above). On Windows the x86 platform builds 64-bit (MinGW x64 only).
 
 ## Developing
 

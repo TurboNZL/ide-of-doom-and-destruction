@@ -86,20 +86,27 @@ test('the launcher scripts exist and the PowerShell one has no non-ASCII bytes (
   assert.match(cmd, /\r\n/); // batch files need CRLF
 });
 
-test('the Windows zip has the launcher with CRLF line endings, the icon and no editor', () => {
+test('the staged Windows files have the launchers with CRLF line endings, the icon and no editor', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wz-'));
-  const out = path.join(dir, 'w.zip');
-  const r = require('child_process').spawnSync('node', [path.join(__dirname, '..', 'scripts', 'build-windows-zip.js'), out], { encoding: 'utf8' });
+  const r = require('child_process').spawnSync('node', [path.join(__dirname, '..', 'scripts', 'stage-windows.js'), dir], { encoding: 'utf8' });
   assert.strictEqual(r.status, 0, r.stderr);
-  const names = require('child_process').spawnSync('unzip', ['-Z1', out], { encoding: 'utf8' });
-  if (names.error) return; // no unzip on this machine
-  const list = names.stdout.split('\n');
-  for (const n of ['bin/ide.cmd', 'bin/ide.ps1', 'extension/extension.js', 'extension/lib/windows.js', 'config/settings.windows.json', 'packaging/ide-of-doom-and-destruction.ico', 'scripts/pack-vsix.js']) {
-    assert.ok(list.includes(n), n);
+  for (const n of ['bin/ide.cmd', 'bin/ide.ps1', 'bin/ide.vbs', 'extension/extension.js', 'extension/lib/windows.js', 'config/settings.windows.json', 'packaging/ide-of-doom-and-destruction.ico', 'scripts/pack-vsix.js']) {
+    assert.ok(fs.existsSync(path.join(dir, n)), n);
   }
-  assert.ok(!list.some((n) => /^vscode\//.test(n)));
-  const ps1 = require('child_process').spawnSync('unzip', ['-p', out, 'bin/ide.ps1'], { encoding: 'buffer' }).stdout.toString('latin1');
-  assert.ok(!/[^\r]\n/.test(ps1), 'every line ends with CRLF');
+  assert.ok(!fs.existsSync(path.join(dir, 'vscode')));
+  for (const n of ['bin/ide.ps1', 'bin/ide.cmd', 'bin/ide.vbs']) {
+    const text = fs.readFileSync(path.join(dir, n), 'latin1');
+    assert.ok(!/[^\r]\n/.test(text), n + ': every line ends with CRLF');
+    assert.ok([...text].every((c) => c.charCodeAt(0) < 128), n + ': plain ASCII');
+  }
+});
+
+test('the shortcut starts the launcher through wscript with no console', () => {
+  const nsi = fs.readFileSync(path.join(__dirname, '..', 'packaging', 'windows-installer.nsi'), 'utf8');
+  const ps1 = fs.readFileSync(path.join(__dirname, '..', 'bin', 'ide.ps1'), 'utf8');
+  assert.match(nsi, /wscript\.exe.*ide\.vbs/);
+  assert.match(ps1, /wscript\.exe/);
+  assert.match(ps1, /ide\.vbs/);
 });
 
 test('settings.windows.json is valid and only adds the clangd driver permission', () => {
