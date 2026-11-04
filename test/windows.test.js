@@ -111,3 +111,14 @@ test('settings.windows.json is valid and only adds the clangd driver permission'
   delete b['clangd.arguments'];
   assert.deepStrictEqual(a, b);
 });
+
+test('the Windows installer builds when makensis is present', (t) => {
+  const cp = require('child_process');
+  if (cp.spawnSync('makensis', ['-VERSION']).error) return t.skip('no makensis');
+  const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'inst-')), 'setup.exe');
+  const r = cp.spawnSync('bash', [path.join(__dirname, '..', 'scripts', 'build-windows-installer.sh'), '2026.11.0', out], { encoding: 'utf8' });
+  assert.strictEqual(r.status, 0, r.stderr + r.stdout);
+  const head = fs.readFileSync(out).subarray(0, 2).toString('latin1');
+  assert.strictEqual(head, 'MZ'); // a Windows executable
+  assert.ok(fs.statSync(out).size > 100000);
+});

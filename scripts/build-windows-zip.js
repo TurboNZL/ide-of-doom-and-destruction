@@ -2,14 +2,17 @@
 'use strict';
 // Packs the tool for Windows: a zip to unpack anywhere, then run bin\ide.cmd setup (downloads the editor and the compiler).
 // Like the .deb it never ships VS Code. Usage: node scripts/build-windows-zip.js <output.zip>
+//        node scripts/build-windows-zip.js --stage <folder>   (writes the same files to a folder; the installer is built from it)
 
 const fs = require('fs');
 const path = require('path');
 const { makeZip } = require('../extension/lib/zip');
 
-const out = process.argv[2];
-if (!out) {
-  console.error('Usage: build-windows-zip.js <output.zip>');
+const staging = process.argv[2] === '--stage';
+const out = staging ? null : process.argv[2];
+const stageDir = staging ? process.argv[3] : null;
+if (!out && !stageDir) {
+  console.error('Usage: build-windows-zip.js <output.zip> | --stage <folder>');
   process.exit(2);
 }
 const root = path.join(__dirname, '..');
@@ -33,6 +36,16 @@ for (const f of FILES) for (const rel of walk(f, [])) {
   if (/\.(cmd|ps1)$/.test(rel)) data = Buffer.from(data.toString('utf8').replace(/\r?\n/g, '\r\n'), 'utf8');
   entries.push({ name: rel, data });
 }
-fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
-fs.writeFileSync(out, makeZip(entries));
-console.log('Wrote ' + out + ' (' + entries.length + ' files)');
+if (stageDir) {
+  fs.rmSync(stageDir, { recursive: true, force: true });
+  for (const e of entries) {
+    const to = path.join(stageDir, e.name);
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.writeFileSync(to, e.data);
+  }
+  console.log('Staged ' + entries.length + ' files in ' + stageDir);
+} else {
+  fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
+  fs.writeFileSync(out, makeZip(entries));
+  console.log('Wrote ' + out + ' (' + entries.length + ' files)');
+}
