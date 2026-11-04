@@ -22,7 +22,9 @@ The `.vcxproj` is the source of truth: the file list, language standard, warning
 
 ### Windows 10 and 11 (x64)
 
-Download `ide-of-doom-and-destruction-windows.zip` from the [latest release](https://github.com/TurboNZL/ide-of-doom-and-destruction/releases/latest), unpack it somewhere you keep (for example `C:\Tools`; not under `Program Files`, the editor is downloaded next to it), and double-click `bin\ide.cmd` or run:
+Download `ide-of-doom-and-destruction-setup.exe` from the [latest release](https://github.com/TurboNZL/ide-of-doom-and-destruction/releases/latest) and run it. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\ide-of-doom-and-destruction`, adds the Start menu entry, then opens a window that downloads the editor and compiler (below). Windows may show a SmartScreen warning because the installer is not code-signed: *More info* > *Run anyway*. Uninstall from *Settings > Apps*; that removes the editor and its settings and extensions too.
+
+Prefer no installer? Download `ide-of-doom-and-destruction-windows.zip` instead, unpack it somewhere you keep (for example `C:\Tools`; not under `Program Files`, the editor is downloaded next to it), and double-click `bin\ide.cmd` or run:
 
 ```
 bin\ide.cmd setup
@@ -106,7 +108,7 @@ Command palette > **IDE of Doom: Updates...** opens the Updates window: installe
 
 The editor checks once a day and offers to open the window when a newer release exists (setting `vsproj.checkForUpdates`). A copy installed from a clone updates with `ide update` (`git pull` and a reinstall of the extension).
 
-Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`), the whole tool (`.tar.gz`) and the Windows zip attached.
+Every merge to `main` becomes a release (`vYYYY.M.N`) with the `.deb`, the extension (`.vsix`), the whole tool (`.tar.gz`) and the Windows installer and zip attached.
 
 ## What it does not do
 
