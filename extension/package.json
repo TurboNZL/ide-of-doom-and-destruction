@@ -50,7 +50,7 @@
       { "command": "editor.action.removeCommentLine", "key": "ctrl+k ctrl+u", "when": "editorTextFocus" }
     ],
     "viewsContainers": {
-      "activitybar": [{ "id": "vsprojContainer", "title": "Solution Explorer", "icon": "media/solution.svg" }]
+      "secondarySidebar": [{ "id": "vsprojContainer", "title": "Solution Explorer", "icon": "media/solution.svg" }]
     },
     "views": {
       "vsprojContainer": [{ "id": "vsprojSolution", "name": "Solution Explorer" }]
