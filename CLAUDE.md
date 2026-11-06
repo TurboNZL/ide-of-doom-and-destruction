@@ -63,6 +63,7 @@ The external terminal windows on a real desktop, Wine prefix creation on first r
 - The user's login shell may be fish (or anything non-POSIX). fish rejects `( ... )` and `{ ...; }` and its quoting differs from the `'\''` idiom, so build tasks pin `/bin/sh -c`, and anything typed into the user's own terminal is a short backslash-escaped `sh <file>` (`escapeArg`, `sendScript`); never type POSIX shell text into it directly.
 
 ## Session log
+- Added Rename (right-click or F2) for files in Solution Explorer: renames on disk and in the `.vcxproj`/`.filters`; `#include` lines are not rewritten. UI untested in a real editor.
 - Windows confirmed working by the owner (build + run). Dropped the zip; added editor icon (rcedit), wscript launcher, update via installer.
 - Windows installer (NSIS) added next to the zip.
 - Windows port (zip, PowerShell launcher, cmd-based build/run, WinLibs compiler). Untested on real Windows.

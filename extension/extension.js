@@ -445,6 +445,22 @@ async function cmdRemoveItem(node) {
   } catch (e) { fail(e); }
 }
 
+async function cmdRenameItem(node) {
+  if (!node || node.kind !== 'file') return;
+  const oldName = node.rel.split('/').pop();
+  const dot = oldName.lastIndexOf('.');
+  const name = await vscode.window.showInputBox({
+    title: 'Rename ' + oldName,
+    value: oldName,
+    valueSelection: [0, dot > 0 ? dot : oldName.length]
+  });
+  if (!name || name === oldName) return;
+  try {
+    ws.renameFile(node.project, node.rel, name.trim());
+    reload();
+  } catch (e) { fail(e); }
+}
+
 async function cmdSetStartup(node) {
   if (!node || !node.project) return;
   startupName = node.project.name;
@@ -591,6 +607,7 @@ function activate(ctx) {
   reg('vsproj.addNewItem', cmdAddNewItem);
   reg('vsproj.addToProject', cmdAddToProject);
   reg('vsproj.removeItem', cmdRemoveItem);
+  reg('vsproj.renameItem', cmdRenameItem);
   reg('vsproj.setStartupProject', cmdSetStartup);
   reg('vsproj.setConfiguration', cmdSetConfiguration);
   reg('vsproj.openProjectFile', cmdOpenProjectFile);

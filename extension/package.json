@@ -21,6 +21,7 @@
       { "command": "vsproj.addClass", "title": "Add Class...", "category": "IDE of Doom", "icon": "$(symbol-class)" },
       { "command": "vsproj.addNewItem", "title": "Add New Item...", "category": "IDE of Doom", "icon": "$(new-file)" },
       { "command": "vsproj.addToProject", "title": "Add to Project", "category": "IDE of Doom" },
+      { "command": "vsproj.renameItem", "title": "Rename", "category": "IDE of Doom" },
       { "command": "vsproj.removeItem", "title": "Remove from Project", "category": "IDE of Doom" },
       { "command": "vsproj.setStartupProject", "title": "Set as Startup Project", "category": "IDE of Doom" },
       { "command": "vsproj.setConfiguration", "title": "Select Configuration and Platform...", "category": "IDE of Doom" },
@@ -42,6 +43,7 @@
       { "command": "vsproj.addNewItem", "key": "ctrl+shift+a", "when": "vsproj.hasSolution" },
       { "command": "vsproj.addClass", "key": "shift+alt+c", "when": "vsproj.hasSolution" },
       { "command": "vsproj.newProject", "key": "ctrl+shift+n" },
+      { "command": "vsproj.renameItem", "key": "f2", "when": "focusedView == vsprojSolution" },
       { "command": "vsprojSolution.focus", "key": "ctrl+alt+l", "when": "vsproj.hasSolution" },
       { "command": "editor.action.formatDocument", "key": "ctrl+k ctrl+d", "when": "editorTextFocus" },
       { "command": "editor.action.addCommentLine", "key": "ctrl+k ctrl+c", "when": "editorTextFocus" },
@@ -63,7 +65,8 @@
     "menus": {
       "commandPalette": [
         { "command": "vsproj.runWindowsBuild", "when": "!isWindows" },
-        { "command": "vsproj.runExeInPrefix", "when": "!isWindows" }
+        { "command": "vsproj.runExeInPrefix", "when": "!isWindows" },
+        { "command": "vsproj.renameItem", "when": "false" }
       ],
       "editor/title": [
         { "command": "vsproj.run", "when": "vsproj.hasSolution && resourceExtname =~ /^\\.(cpp|c|cc|cxx|h|hpp|hh|hxx)$/", "group": "navigation@1" },
@@ -80,7 +83,8 @@
         { "command": "vsproj.addNewItem", "when": "view == vsprojSolution && viewItem =~ /^(project|filter)$/", "group": "1_add@2" },
         { "command": "vsproj.setStartupProject", "when": "view == vsprojSolution && viewItem == project", "group": "2_project@1" },
         { "command": "vsproj.openProjectFile", "when": "view == vsprojSolution && viewItem == project", "group": "2_project@2" },
-        { "command": "vsproj.removeItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove" }
+        { "command": "vsproj.renameItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove@1" },
+        { "command": "vsproj.removeItem", "when": "view == vsprojSolution && viewItem == file", "group": "3_remove@2" }
       ],
       "explorer/context": [
         { "command": "vsproj.runExeInPrefix", "when": "resourceExtname == .exe && !isWindows", "group": "7_modification" },
