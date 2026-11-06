@@ -218,3 +218,17 @@ test('folder names cannot escape the submission folder', () => {
   const { folderName } = require('../extension/lib/submission');
   assert.strictEqual(folderName('Source - {name}', { name: '../evil' }), 'Source - .._evil');
 });
+
+test('renameFile renames on disk, in the project and in the filters', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rename-'));
+  const slnPath = ws.createProject({ location: dir, name: 'Ren' });
+  const p = { file: path.join(path.dirname(slnPath), 'Ren', 'Ren.vcxproj') };
+  const proj = ws.loadProject(p.file);
+  ws.addClass(proj, 'Old');
+  ws.renameFile(ws.loadProject(p.file), 'Old.h', 'New.h');
+  assert.ok(fs.existsSync(path.join(proj.dir, 'New.h')));
+  assert.ok(!fs.existsSync(path.join(proj.dir, 'Old.h')));
+  assert.match(fs.readFileSync(p.file, 'utf8'), /ClInclude Include="New\.h"/);
+  assert.doesNotMatch(fs.readFileSync(p.file, 'utf8'), /Old\.h/);
+  assert.throws(() => ws.renameFile(ws.loadProject(p.file), 'New.h', 'Old.cpp'), /already exists/);
+});

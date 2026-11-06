@@ -105,6 +105,21 @@ function removeFile(project, rel, deleteFromDisk = false) {
   if (deleteFromDisk) fs.rmSync(path.resolve(project.dir, rel), { force: true });
 }
 
+/** Renames a project file on disk and in the project and filters. `rel` is relative to the project folder. Returns the new relative path. */
+function renameFile(project, rel, newName) {
+  if (!newName || /[\\/:*?"<>|]/.test(newName) || newName === '.' || newName === '..') throw new Error('"' + newName + '" is not a valid file name.');
+  const dir = path.posix.dirname(rel);
+  const newRel = dir === '.' ? newName : dir + '/' + newName;
+  if (newRel === rel) return rel;
+  const from = path.resolve(project.dir, rel);
+  const to = path.resolve(project.dir, newRel);
+  if (fs.existsSync(to)) throw new Error(newName + ' already exists.');
+  fs.renameSync(from, to);
+  removeFile(project, rel, false);
+  addFile(project, to);
+  return newRel;
+}
+
 function writeNew(project, fileName, content) {
   const abs = path.join(project.dir, fileName);
   if (fs.existsSync(abs)) throw new Error(fileName + ' already exists.');
@@ -164,6 +179,6 @@ function writeCompileCommands(solution, opts) {
 }
 
 module.exports = {
-  isValidIdentifier, isValidProjectName, loadSolution, loadProject, createProject, addFile, removeFile, addClass, addItem,
+  isValidIdentifier, isValidProjectName, loadSolution, loadProject, createProject, addFile, removeFile, renameFile, addClass, addItem,
   untrackedFiles, writeCompileCommands, gitInit
 };
