@@ -20,7 +20,7 @@ const WIN = process.platform === 'win32';
 let context;
 let solution = null; // loaded solution, or null
 let startupName = null;
-let statusItem;
+let statusItem, explorerItem;
 let runItem;
 let buildItem;
 let menuItem;
@@ -53,6 +53,7 @@ function reload() {
   const root = rootDir();
   solution = root ? ws.loadSolution(root, configuration(), platform()) : null;
   vscode.commands.executeCommand('setContext', 'vsproj.hasSolution', !!solution);
+  if (explorerItem) { if (solution) explorerItem.show(); else explorerItem.hide(); }
   if (solution) {
     try { ws.writeCompileCommands(solution, buildOpts('native')); } catch (e) { log('IntelliSense data not written: ' + e.message); }
   }
@@ -596,6 +597,10 @@ function activate(ctx) {
   menuItem.command = 'vsproj.menu';
   menuItem.tooltip = 'Every action this tool adds';
   menuItem.show();
+  explorerItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  explorerItem.text = '$(list-tree) Solution Explorer';
+  explorerItem.command = 'vsprojSolution.focus';
+  explorerItem.tooltip = 'Open the Solution Explorer (Ctrl+Alt+L)';
 
   const reg = (id, fn) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
   reg('vsproj.newProject', cmdNewProject);
@@ -620,7 +625,7 @@ function activate(ctx) {
   reg('vsproj.runExeInPrefix', cmdRunExe);
   reg('vsproj.startPage', () => startPage.show());
 
-  ctx.subscriptions.push(statusItem, runItem, buildItem, menuItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));
+  ctx.subscriptions.push(explorerItem, statusItem, runItem, buildItem, menuItem, vscode.window.registerTreeDataProvider('vsprojSolution', tree));
 
   const watcher = vscode.workspace.createFileSystemWatcher('**/*.{vcxproj,filters,slnx,sln}');
   watcher.onDidChange(reload);
